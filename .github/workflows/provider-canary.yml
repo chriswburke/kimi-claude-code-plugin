@@ -1,0 +1,58 @@
+name: Kimi provider canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      kimi_model:
+        description: Kimi model name for the temporary environment channel
+        required: true
+        default: kimi-for-coding
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kimi-provider-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLAUDE_PLUGIN_DATA: ${{ runner.temp }}/model-companion-state
+      MODEL_COMPANION_PROJECT_DIR: ${{ github.workspace }}
+      KIMI_CODE_HOME: ${{ runner.temp }}/kimi-code
+      KIMI_DISABLE_TELEMETRY: "1"
+      KIMI_CODE_NO_AUTO_UPDATE: "1"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Require the Kimi secret
+        env:
+          KIMI_MODEL_API_KEY: ${{ secrets.KIMI_MODEL_API_KEY }}
+        run: test -n "$KIMI_MODEL_API_KEY"
+      - name: Install Kimi Code
+        run: npm install --global @moonshot-ai/kimi-code@latest
+      - name: Check Kimi setup and models
+        env:
+          KIMI_MODEL_NAME: ${{ inputs.kimi_model }}
+          KIMI_MODEL_API_KEY: ${{ secrets.KIMI_MODEL_API_KEY }}
+          KIMI_MODEL_MAX_COMPLETION_TOKENS: "512"
+        run: |
+          node plugins/kimi/scripts/companion.mjs setup --json
+          node plugins/kimi/scripts/companion.mjs models --json
+      - name: Run a bounded Kimi plan
+        env:
+          KIMI_MODEL_NAME: ${{ inputs.kimi_model }}
+          KIMI_MODEL_API_KEY: ${{ secrets.KIMI_MODEL_API_KEY }}
+          KIMI_MODEL_MAX_COMPLETION_TOKENS: "512"
+        run: >-
+          node plugins/kimi/scripts/companion.mjs run plan
+          --model "$KIMI_MODEL_NAME" --timeout 2m
+          "Return a three-item read-only plan for checking this repository."

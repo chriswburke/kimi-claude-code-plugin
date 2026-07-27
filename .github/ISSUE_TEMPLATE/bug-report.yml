@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a reproducible Kimi Code Companion failure
+title: "[Bug]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private prompts, model output, or unredacted usage records.
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider
+      options:
+        - Kimi Code Companion
+        - Marketplace, documentation, or release tooling
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Include operating system, Node.js version, and Claude Code version.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest safe sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and redacted logs
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed credentials, authorization headers, private prompts, model output, local paths, and private usage data.
+          required: true
+        - label: This report does not disclose an active vulnerability.
+          required: true

@@ -1,0 +1,36 @@
+name: Security hardening
+description: Report a non-sensitive defense-in-depth gap
+title: "[Security hardening]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: For an active or sensitive vulnerability, stop and follow SECURITY.md instead of using this public form.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Kimi Code Companion
+        - Marketplace, documentation, or release tooling
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Affected trust boundary
+    validations:
+      required: true
+  - type: textarea
+    id: improvement
+    attributes:
+      label: Proposed hardening
+    validations:
+      required: true
+  - type: checkboxes
+    id: public
+    attributes:
+      label: Public disclosure check
+      options:
+        - label: This report contains no exploit details, credentials, private data, or active vulnerability.
+          required: true

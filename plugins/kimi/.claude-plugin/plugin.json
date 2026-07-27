@@ -1,0 +1,16 @@
+{
+  "name": "kimi",
+  "version": "1.0.0",
+  "description": "Use Kimi Code from Claude Code for delegation, tool-constrained read-only analysis, managed jobs, and private local usage reporting.",
+  "license": "MIT",
+  "author": { "name": "model-companions contributors" },
+  "mcpServers": {
+    "companion": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/companion.mjs", "mcp"],
+      "env": {
+        "MODEL_COMPANION_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a bounded improvement to Kimi Code Companion
+title: "[Feature]: "
+labels: []
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Kimi Code Companion
+        - Marketplace, documentation, or release tooling
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the task or limitation this change should address.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the command, output, and safety boundary you expect.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: independence
+    attributes:
+      label: Provider scope
+      options:
+        - label: This proposal keeps Kimi source under `plugins/kimi` and does not introduce another provider.
+          required: true

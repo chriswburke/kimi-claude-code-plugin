@@ -1,0 +1,31 @@
+{
+  "name": "model-companions-kimi-workspace",
+  "private": true,
+  "type": "module",
+  "description": "Marketplace and workspace for the Kimi Code Claude Code plugin.",
+  "license": "MIT",
+  "engines": { "node": ">=18.18.0" },
+  "workspaces": [
+    "plugins/kimi"
+  ],
+  "scripts": {
+    "test": "npm run test:kimi && node --test tests/documentation.test.mjs tests/marketplace.test.mjs tests/structured-output.test.mjs tests/release-tools.test.mjs",
+    "test:docs": "node --test tests/documentation.test.mjs",
+    "test:release-tools": "node --test tests/release-tools.test.mjs",
+    "test:claude-smoke": "node scripts/claude-marketplace-smoke.mjs",
+    "test:kimi": "npm --prefix plugins/kimi test",
+    "test:contract:kimi": "node --test tests/structured-output.test.mjs",
+    "test:pack": "node --test tests/package-smoke.test.mjs",
+    "test:pack:kimi": "node --test tests/package-smoke.test.mjs",
+    "validate": "claude plugin validate --strict . && npm run validate --workspaces --if-present",
+    "validate:kimi": "npm run version:check:kimi && claude plugin validate --strict . && npm --prefix plugins/kimi run validate",
+    "version:check": "node scripts/bump-version.mjs --check",
+    "version:check:kimi": "node scripts/bump-version.mjs --check kimi",
+    "release:check": "npm test && npm run version:check && npm run test:pack",
+    "release:check:strict": "npm run release:check && npm run validate",
+    "release:check:kimi": "npm run release:check",
+    "release:check:kimi:strict": "npm run release:check:strict",
+    "release:checksums": "node scripts/release-checksums.mjs",
+    "release:target": "node scripts/verify-release-target.mjs"
+  }
+}

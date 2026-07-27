@@ -1,0 +1,37 @@
+---
+meta:
+  title: Troubleshoot Kimi Code Companion failures
+  navLabel: Troubleshooting
+  category: Guides
+  contentType: Troubleshooting
+contentPlan: ./content-plan.md#troubleshooting
+---
+
+# Troubleshoot Kimi Code Companion failures
+
+Start with local diagnostics; they redact sensitive values and do not start inference.
+
+```text
+/kimi:setup --json
+/kimi:config --json
+/kimi:models --json
+/kimi:status --active
+```
+
+## Kimi CLI is missing or unsupported
+
+Install Kimi Code 0.29.0 or newer, authenticate with `kimi login`, and rerun setup. Constrained workflows require the `--agent-file`, `--skills-dir`, and `--add-dir` capabilities. On Windows, configure a native `.exe` or `.com` executable, or use WSL; the plugin deliberately rejects batch wrappers.
+
+## An executable trust check fails
+
+Use an administrator- or current-user-owned executable and non-writable parent directories. Ensure implicit `PATH` entries are absolute and do not resolve into the repository. Set `KIMI_BIN` only to a deliberate absolute path. Do not relax state or executable permissions to make a check pass.
+
+## A job cannot be selected or recovered
+
+Use `/kimi:status --active` to find its identifier, then provide it to `/kimi:result` or `/kimi:cancel`. Cancellation may omit an ID only with exactly one active job. If recovery reports unsafe state, retain the named private evidence and correct the symlink, ownership, or permission problem; do not delete active guard, worker, slot, or job files manually.
+
+## State appears empty after reinstalling
+
+The two-repository migration installs Kimi as `kimi@model-companions-kimi`, so Claude Code may set a new `CLAUDE_PLUGIN_DATA` path. This is expected. The companion does not merge old combined-installation state into the new identity. Keep the former directory private until any old jobs have stopped and you have completed required inspection.
+
+For command behavior, see the [command reference](./command-reference.md); for trust and containment, see the [security model](./security-model.md).

@@ -1,0 +1,23 @@
+{
+  "name": "@model-companions/kimi-claude-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent Claude Code plugin for Kimi delegation, read-only analysis, background jobs, and private local usage reporting.",
+  "license": "MIT",
+  "engines": { "node": ">=18.18.0" },
+  "files": [
+    ".claude-plugin/",
+    "assets/",
+    "commands/",
+    "scripts/",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "node --check scripts/companion.mjs && node --check scripts/tool-gate.mjs",
+    "test": "npm run check && node --test",
+    "validate": "claude plugin validate --strict ."
+  }
+}
