@@ -13,7 +13,7 @@ Validate and package the Kimi plugin from this repository. The plugin source is 
 
 ## Validate a release
 
-Run from the repository root with Node.js 18.18 or newer, npm, and Claude Code 2.1.169 or newer when strict manifest validation is required:
+Run from the repository root with Node.js 18.18 or newer, npm, and Claude Code 2.1.169 or newer for strict manifest validation:
 
 ```bash
 npm test

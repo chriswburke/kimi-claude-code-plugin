@@ -13,7 +13,7 @@ This tutorial installs Kimi from this repository, verifies it without inference,
 
 ## Check prerequisites
 
-Install Git, Node.js 18.18 or newer, Claude Code 2.1.169 or newer, and Kimi Code 0.29.0 or newer. Install and authenticate the Kimi CLI using the [official Kimi Code documentation](https://www.kimi.com/code/docs/en/):
+Install Git, Node.js 18.18 or newer, Claude Code 2.1.169 or newer, and Kimi Code 0.29.0 or newer. Install and authenticate the Kimi command-line interface (CLI) using the [official Kimi Code documentation](https://www.kimi.com/code/docs/en/):
 
 ```bash
 kimi login
@@ -39,7 +39,7 @@ The source entry is `./plugins/kimi`.
 /kimi:config
 ```
 
-These commands inspect local configuration and do not start model inference. `/kimi:setup` checks the Kimi CLI version, required capabilities, and `kimi doctor`; authentication is confirmed only by a delegated request.
+These commands inspect local configuration and do not start model inference. `/kimi:setup` checks the Kimi CLI version, required capabilities, and `kimi doctor`. Only a delegated request confirms authentication.
 
 ## Run a read-only request
 
@@ -64,6 +64,6 @@ If the list reports the legacy identity at project or local scope, repeat the un
 
 Register this repository, install `kimi@model-companions-kimi`, reload plugins, and run `/kimi:setup`. Do not keep both identities enabled because each registers the same `/kimi:*` commands and MCP tools.
 
-Claude Code can provide a different `CLAUDE_PLUGIN_DATA` path for the new identity. The companion deliberately treats that path as a new private state root and never merges, copies, or removes old state. Keep the old state directory until you have inspected any jobs or usage records you need.
+Claude Code can supply a different `CLAUDE_PLUGIN_DATA` path for the new identity. The companion deliberately treats that path as a new private state root and never merges, copies, or removes old state. Keep the old state directory until you have inspected any jobs or usage records you need.
 
 Continue with the [command reference](./command-reference.md), [job and usage guide](./manage-jobs-and-usage.md), or [security model](./security-model.md).

@@ -33,6 +33,10 @@ export function fakeEnvironment(temporary, overrides = {}) {
     ...fakeProvider,
     ...overrides
   };
+  // Tests run from inside Claude Code inherit a real CLAUDE_PLUGIN_DATA. It
+  // outranks MODEL_COMPANION_STATE_DIR in dataRoot(), so leaving it set points
+  // the suite at the user's live plugin state instead of the temporary one.
+  if (!Object.hasOwn(overrides, "CLAUDE_PLUGIN_DATA")) delete environment.CLAUDE_PLUGIN_DATA;
   for (const key of Object.keys(environment)) {
     if (key.startsWith("FAKE_")) delete environment[key];
   }

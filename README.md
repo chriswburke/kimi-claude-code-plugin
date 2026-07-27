@@ -33,7 +33,7 @@ Start with a request that cannot modify the checkout:
 
 The former `model-companions` marketplace has split into exactly two repositories: this Kimi repository and the separate GLM repository. Install Kimi from this repository as `kimi@model-companions-kimi`; do not expect updates through `kimi@model-companions`.
 
-The split also changes the Claude Code data-directory identity. Claude Code may set `CLAUDE_PLUGIN_DATA` to a new Kimi-specific directory after reinstalling. The companion treats the supplied directory as a separate private state root; it does not merge, copy, or delete data from the former combined installation. Keep the old directory until you have confirmed any retained jobs or usage records you need, and never move private state while a Kimi job is active.
+The split also changes the Claude Code data-directory identity. Claude Code may set `CLAUDE_PLUGIN_DATA` to a new Kimi-specific directory after reinstalling. The companion treats the supplied directory as a separate private state root; it does not merge, copy, or delete data from the former combined installation. Keep the old directory until you have confirmed any retained jobs or usage records you need. Never move private state while a Kimi job is active.
 
 Before installing the new identity, finish or cancel every legacy Kimi job and inspect the local usage you need to retain. Exit Claude Code, then preserve the former data directory while removing the legacy installation:
 

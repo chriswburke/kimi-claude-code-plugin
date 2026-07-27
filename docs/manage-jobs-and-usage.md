@@ -9,7 +9,7 @@ contentPlan: ./content-plan.md#manage-jobs-and-usage
 
 # Manage Kimi background jobs and usage
 
-Kimi background jobs are scoped to the current Git repository. Its local usage ledger is private and excludes prompts, responses, diagnostics, repository paths, credentials, process identifiers, and worker tokens.
+Kimi scopes background jobs to the current Git repository. Its local usage ledger is private and excludes prompts, responses, diagnostics, repository paths, credentials, process identifiers, and worker tokens.
 
 ## Start and inspect a job
 
@@ -37,7 +37,7 @@ You may omit the identifier only when exactly one job is active. Cancellation wa
 /kimi:usage --window 30d --scope all --group-by model --json
 ```
 
-The report is local operational activity, not token accounting or membership quota. Kimi Code does not expose supported noninteractive quota data, so the companion does not read credential files, call undocumented endpoints, scrape the terminal, open a browser, or launch a dummy prompt.
+The report covers local operational activity, not token accounting or membership quota. Kimi Code exposes no supported noninteractive quota data. The companion therefore does not read credential files, call undocumented endpoints, scrape the terminal, open a browser, or launch a dummy prompt.
 
 ## Clean retained state
 

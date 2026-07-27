@@ -1,14 +1,18 @@
 # Changelog
 
-## Unreleased
+## 1.0.0
 
 - Moved Kimi to its own repository and marketplace identity,
   `kimi@model-companions-kimi`, with source nested at `plugins/kimi`.
 - Documented that the new identity can change `CLAUDE_PLUGIN_DATA`; the plugin
   does not automatically merge, copy, or delete previous private state.
-
-## 1.0.0
-
+- Fixed test isolation so an inherited `CLAUDE_PLUGIN_DATA` no longer redirects
+  the suite onto live plugin state. `MODEL_COMPANION_STATE_DIR` now takes
+  precedence as the explicit override.
+- Fixed foreground and session cleanup so a cleanup failure annotates the
+  original error instead of replacing it.
+- Scaled the untracked-file review budget with
+  `KIMI_COMPANION_MAX_REVIEW_CONTEXT_BYTES` instead of a fixed bound.
 - Added explicit `fast`, `stable`, `deep`, and `large-context` model profiles.
 - Added model/config inspection, explore/plan workflows, review presets, richer
   job controls, grouped local usage reports, and guarded local cleanup.
