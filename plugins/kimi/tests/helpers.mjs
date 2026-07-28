@@ -9,47 +9,50 @@ export const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.ur
 export const runtime = path.join(pluginRoot, "scripts", "companion.mjs");
 export const fixture = path.join(pluginRoot, "tests", "fixtures", "fake-kimi.mjs");
 let fakeConfigCounter = 0;
-let providerFixture;
+let temporaryBase;
 
-export function temporaryDirectory() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "kimi-companion-test-"));
-}
-
-// Mirrors assertTrustedPosixExecutable in the runtime: every ancestor must be
-// owned by this user or root and must not be group- or world-writable.
-function trustedExecutableChain(target) {
+// Mirrors assertTrustedPosixExecutable in the runtime: a directory and every
+// ancestor must be owned by this user or root and must not be group- or
+// world-writable.
+function trustedDirectoryChain(directory) {
   if (process.platform === "win32" || typeof process.getuid !== "function") return true;
   const uid = process.getuid();
-  let directory;
-  try { directory = path.dirname(fs.realpathSync(target)); } catch { return false; }
+  let current;
+  try { current = fs.realpathSync(directory); } catch { return false; }
   while (true) {
     let stat;
-    try { stat = fs.statSync(directory); } catch { return false; }
+    try { stat = fs.statSync(current); } catch { return false; }
     if (!stat.isDirectory() || (stat.uid !== uid && stat.uid !== 0) || (stat.mode & 0o022) !== 0) return false;
-    const parent = path.dirname(directory);
-    if (parent === directory) return true;
-    directory = parent;
+    const parent = path.dirname(current);
+    if (parent === current) return true;
+    current = parent;
   }
 }
 
-// A CI checkout can sit below a group- or world-writable ancestor, which the
-// runtime executable-trust check correctly rejects. Stage the fixture where the
-// chain is trusted rather than relaxing that check, which is a real security
-// boundary. Local checkouts already qualify, so nothing is copied there.
-function trustedProviderFixture() {
-  if (providerFixture !== undefined) return providerFixture;
-  if (trustedExecutableChain(fixture)) return (providerFixture = fixture);
-  for (const base of [os.homedir(), os.tmpdir()]) {
+// Tests place a fake provider executable inside their temporary repository, and
+// the runtime executable-trust check walks every ancestor. On Linux os.tmpdir()
+// is /tmp (mode 1777), so that walk correctly fails. macOS gets a private
+// per-user temp directory, which is why this only ever broke in CI. Pick a base
+// whose chain is trusted instead of relaxing the check, which is a real
+// security boundary.
+function temporaryRoot() {
+  if (temporaryBase !== undefined) return temporaryBase;
+  for (const base of [os.tmpdir(), os.homedir()]) {
     try {
-      const directory = fs.mkdtempSync(path.join(base, ".kimi-test-bin-"));
-      fs.chmodSync(directory, 0o700);
-      const staged = path.join(directory, "fake-kimi.mjs");
-      fs.copyFileSync(fixture, staged);
-      fs.chmodSync(staged, 0o700);
-      if (trustedExecutableChain(staged)) return (providerFixture = staged);
+      const probe = fs.mkdtempSync(path.join(base, "kimi-companion-test-"));
+      fs.chmodSync(probe, 0o700);
+      const trusted = trustedDirectoryChain(probe);
+      fs.rmSync(probe, { recursive: true, force: true });
+      if (trusted) return (temporaryBase = base);
     } catch { /* Try the next candidate base. */ }
   }
-  return (providerFixture = fixture);
+  return (temporaryBase = os.tmpdir());
+}
+
+export function temporaryDirectory() {
+  const directory = fs.mkdtempSync(path.join(temporaryRoot(), "kimi-companion-test-"));
+  try { fs.chmodSync(directory, 0o700); } catch { /* Windows inherits its parent ACL. */ }
+  return directory;
 }
 
 export function fakeEnvironment(temporary, overrides = {}) {
@@ -64,7 +67,7 @@ export function fakeEnvironment(temporary, overrides = {}) {
   const usesExternalLauncher = process.platform === "win32" || Object.hasOwn(overrides, "KIMI_BIN");
   const fakeProvider = usesExternalLauncher
     ? { KIMI_BIN: process.execPath, KIMI_BIN_ARGS_JSON: JSON.stringify([fixture, "--fake-config", fakeConfigFile]) }
-    : { KIMI_BIN: trustedProviderFixture(), KIMI_BIN_ARGS_JSON: JSON.stringify(["--fake-config", fakeConfigFile]) };
+    : { KIMI_BIN: fixture, KIMI_BIN_ARGS_JSON: JSON.stringify(["--fake-config", fakeConfigFile]) };
   const environment = {
     ...process.env,
     MODEL_COMPANION_STATE_DIR: path.join(temporary, "state"),
