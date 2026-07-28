@@ -20,15 +20,15 @@ kimi login
 
 ## Add this marketplace
 
-From this repository root in Claude Code, register this marketplace and install Kimi:
+Register the marketplace and install Kimi from Claude Code:
 
 ```text
-/plugin marketplace add .
+/plugin marketplace add chriswburke/kimi-claude-code-plugin
 /plugin install kimi@model-companions-kimi
 /reload-plugins
 ```
 
-The source entry is `./plugins/kimi`.
+To develop against a local checkout instead, run `/plugin marketplace add .` from the repository root. The source entry is `./plugins/kimi`.
 
 ## Verify Kimi
 

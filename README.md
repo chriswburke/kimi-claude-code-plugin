@@ -4,13 +4,15 @@ Use Kimi Code from Claude Code for autonomous delegation, tool-constrained repos
 
 ## Install Kimi
 
-Clone this repository, then run these commands in Claude Code from its root:
+Run these commands in Claude Code:
 
 ```text
-/plugin marketplace add .
+/plugin marketplace add chriswburke/kimi-claude-code-plugin
 /plugin install kimi@model-companions-kimi
 /reload-plugins
 ```
+
+To work on the plugin itself, clone the repository and add it from the checkout with `/plugin marketplace add .` instead.
 
 Kimi requires Git, Node.js 18.18 or newer, Claude Code 2.1.169 or newer, and Kimi Code 0.29.0 or newer. Continuous integration covers Linux and macOS. Windows is untested; run the plugin under WSL there. Authenticate the Kimi CLI with `kimi login`, then verify the installation without model inference:
 
