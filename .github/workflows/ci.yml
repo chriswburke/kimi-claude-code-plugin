@@ -36,6 +36,22 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
+      # setup-node installs into /opt/hostedtoolcache, which the runner image
+      # leaves group- or world-writable. The contract tests require a Node
+      # launcher whose whole ancestor chain is trusted, matching what the
+      # runtime enforces for a provider executable. Tighten the chain here
+      # rather than relaxing that check.
+      - name: Trust the Node toolchain directory chain
+        if: runner.os != 'Windows'
+        run: |
+          target="$(readlink -f "$(command -v node)")"
+          sudo chmod go-w "$target" || true
+          directory="$(dirname "$target")"
+          while [ "$directory" != "/" ]; do
+            sudo chmod go-w "$directory" || true
+            directory="$(dirname "$directory")"
+          done
+          ls -ld "$target" "$(dirname "$target")"
       - run: npm test
       - run: npm run version:check
 
