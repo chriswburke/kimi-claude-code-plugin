@@ -67,7 +67,12 @@ test("root scripts and release workflow are Kimi-only", () => {
 
 test("validation, dependency, release, and canary workflows keep bounded trust", () => {
   const ci = workflow("ci.yml");
-  assert.match(ci, /os: \[ubuntu-latest, macos-latest, windows-latest\]/);
+  // Push and pull requests run Linux only; the release lane adds macOS. Windows
+  // is deliberately absent because its suite has never passed, and the README
+  // documents those runtime paths as untested.
+  assert.match(ci, /os: \[ubuntu-latest\]/);
+  assert.match(ci, /os: \[ubuntu-latest, macos-latest\]/);
+  assert.doesNotMatch(ci, /windows-latest/);
   assert.match(ci, /node: \["18\.18\.0", "20", "22"\]/);
   assert.match(ci, /claude-version:\s*\["2\.1\.169", "latest"\]/);
   assert.match(ci, /matrix\.claude-version == 'latest'[\s\S]*npm run test:claude-smoke/);

@@ -13,6 +13,8 @@ provider package in this repository and is published as
 - Node.js 18.18 or newer
 - Claude Code 2.1.169 or newer
 - Kimi Code 0.29.0 or newer
+- Linux or macOS. Continuous integration does not cover Windows, so treat the
+  Windows paths below as untested and run the plugin under WSL instead.
 
 Install and authenticate Kimi Code using the
 [official documentation](https://www.kimi.com/code/docs/en/):
@@ -374,10 +376,11 @@ canonical parent directories. `KIMI_BIN` is an explicit operator opt-in: when
 set, it must be an absolute path and still passes the ownership/mode checks,
 but it may intentionally name a workspace-local executable.
 
-On Windows, only native `.exe` or `.com` providers are accepted. The npm
-`.cmd` shim and other batch wrappers are intentionally unsupported because
-their arguments would otherwise cross a command shell. Configure `KIMI_BIN`
-to a native executable or run the plugin inside WSL.
+The Windows code paths are present but untested: no automated suite runs on
+Windows, so the behavior described here is unverified. Run the plugin under
+WSL. Where the Windows paths do run, only native `.exe` or `.com` providers
+are accepted. The npm `.cmd` shim and other batch wrappers stay unsupported
+because their arguments would otherwise cross a command shell.
 
 The plugin manifest and command hooks necessarily launch a bare `node` before
 these runtime checks can execute. The Node executable and Claude Code’s

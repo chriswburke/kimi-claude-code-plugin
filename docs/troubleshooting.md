@@ -19,7 +19,7 @@ Start with local diagnostics; they redact sensitive values and do not start infe
 
 ## Kimi CLI is missing or unsupported
 
-Install Kimi Code 0.29.0 or newer, authenticate with `kimi login`, and rerun setup. Constrained workflows require the `--agent-file`, `--skills-dir`, and `--add-dir` capabilities. On Windows, configure a native `.exe` or `.com` executable, or use WSL; the plugin deliberately rejects batch wrappers.
+Install Kimi Code 0.29.0 or newer, authenticate with `kimi login`, and rerun setup. Constrained workflows require the `--agent-file`, `--skills-dir`, and `--add-dir` capabilities. The plugin deliberately rejects batch wrappers. Windows is untested, so use WSL.
 
 ## An executable trust check fails
 
