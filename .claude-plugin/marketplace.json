@@ -10,8 +10,8 @@
       "description": "Use Kimi Code for profiled delegation, exploration, planning, review, sessions, and local usage reporting.",
       "author": { "name": "model-companions contributors" },
       "category": "development",
-      "tags": ["kimi", "delegation", "planning", "code-review", "usage"],
-      "keywords": ["kimi-code", "coding-agent", "background-jobs", "structured-output"],
+      "tags": ["claude-code", "kimi", "kimi-code", "delegation", "planning", "code-review", "usage"],
+      "keywords": ["claude-code", "claude-code-plugin", "kimi", "kimi-code", "moonshotai", "mcp", "coding-agent", "code-review", "background-jobs", "structured-output"],
       "source": "./plugins/kimi"
     }
   ]

@@ -13,12 +13,20 @@ if (fakeConfigIndex >= 0 && args[fakeConfigIndex + 1]) {
 }
 const fake = (name) => fakeConfiguration[name];
 
+// Tests poll these record files and parse them immediately. A plain write lets
+// a reader observe a partially written file, so publish by rename instead.
+function writeRecord(file, value) {
+  const temporary = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, typeof value === "string" ? value : JSON.stringify(value));
+  fs.renameSync(temporary, file);
+}
+
 if (args.includes("--version") && fake("FAKE_PROBE_LEAVE_CHILD") === "1") {
   const grandchild = spawn(process.execPath, ["-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"], {
     stdio: ["ignore", "inherit", "inherit"]
   });
   if (fake("FAKE_RECORD_FILE")) {
-    fs.writeFileSync(fake("FAKE_RECORD_FILE"), JSON.stringify({ providerPid: process.pid, grandchildPid: grandchild.pid }));
+    writeRecord(fake("FAKE_RECORD_FILE"), { providerPid: process.pid, grandchildPid: grandchild.pid });
   }
   process.exit(0);
 } else if (args.includes("--version") && fake("FAKE_PROBE_HANG_TREE") === "1") {
@@ -26,7 +34,7 @@ if (args.includes("--version") && fake("FAKE_PROBE_LEAVE_CHILD") === "1") {
     stdio: "ignore"
   });
   if (fake("FAKE_RECORD_FILE")) {
-    fs.writeFileSync(fake("FAKE_RECORD_FILE"), JSON.stringify({ providerPid: process.pid, grandchildPid: grandchild.pid }));
+    writeRecord(fake("FAKE_RECORD_FILE"), { providerPid: process.pid, grandchildPid: grandchild.pid });
   }
   process.on("SIGTERM", () => {});
   setInterval(() => {}, 1000);
@@ -97,12 +105,12 @@ if (args.includes("acp")) {
     await new Promise(() => {});
   }
   const record = () => {
-    if (fake("FAKE_RECORD_FILE")) fs.writeFileSync(fake("FAKE_RECORD_FILE"), JSON.stringify({
+    if (fake("FAKE_RECORD_FILE")) writeRecord(fake("FAKE_RECORD_FILE"), {
       providerPid: process.pid,
       grandchildPid: grandchild?.pid || null,
       requests,
       environmentKeys: Object.keys(process.env).sort()
-    }, null, 2));
+    }, null, 2);
   };
   const finishPrompt = (message) => {
     const output = fake("FAKE_ACP_OUTPUT_BYTES")
@@ -203,7 +211,7 @@ if (fake("FAKE_PROVIDER_MODE") === "wait" || fake("FAKE_PROVIDER_MODE") === "lea
   grandchild.stdout.destroy();
   grandchild.unref();
   if (fake("FAKE_RECORD_FILE")) {
-    fs.writeFileSync(fake("FAKE_RECORD_FILE"), JSON.stringify({ providerPid: process.pid, grandchildPid: grandchild.pid }));
+    writeRecord(fake("FAKE_RECORD_FILE"), { providerPid: process.pid, grandchildPid: grandchild.pid });
   }
   if (fake("FAKE_PROVIDER_MODE") === "wait") setInterval(() => {}, 1000);
   else process.stdout.write(`${JSON.stringify({ prompt, providerPid: process.pid, grandchildPid: grandchild.pid })}\n`);
@@ -231,7 +239,7 @@ if (fake("FAKE_PROVIDER_MODE") === "wait" || fake("FAKE_PROVIDER_MODE") === "lea
     promptFile: process.env.MODEL_COMPANION_PROMPT_FILE || null,
     environmentKeys: Object.keys(process.env).sort()
   };
-  if (fake("FAKE_RECORD_FILE")) fs.writeFileSync(fake("FAKE_RECORD_FILE"), JSON.stringify(record, null, 2));
+  if (fake("FAKE_RECORD_FILE")) writeRecord(fake("FAKE_RECORD_FILE"), JSON.stringify(record, null, 2));
   if (fake("FAKE_PROVIDER_HOLD_AFTER_RECORD_MS")) {
     await new Promise((resolve) => setTimeout(resolve, Number(fake("FAKE_PROVIDER_HOLD_AFTER_RECORD_MS"))));
   }
