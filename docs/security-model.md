@@ -34,8 +34,4 @@ The companion stores state in a private canonical directory, rejects symbolic li
 
 On POSIX, implicit Kimi and Git lookup requires nonempty absolute `PATH` entries, rejects candidates inside the repository, and checks ownership and group/world write permissions. `KIMI_BIN` is an explicit absolute-path decision and receives the same checks. Windows accepts native `.exe` and `.com` providers, not `.cmd` or `.bat` wrappers. The manifest and hook still launch bare `node`, so the outer Node executable and inherited `PATH` remain trusted prerequisites.
 
-## State identity after the split
-
-The two-repository migration changes the Kimi marketplace identity to `model-companions-kimi`. Claude Code can therefore supply a new `CLAUDE_PLUGIN_DATA` directory. Treat both the former and new directories as private state roots. The companion does not migrate, merge, or remove old data automatically; inspect old jobs only after their owners have stopped, and never copy sensitive state into an issue.
-
 For the complete package-level contract, read the [Kimi package security model](../plugins/kimi/README.md#security-model).

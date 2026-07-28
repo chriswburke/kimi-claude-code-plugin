@@ -7,17 +7,6 @@ This directory is the Kimi source nested under `plugins/kimi`. It is the only
 provider package in this repository and is published as
 `kimi@model-companions-kimi`.
 
-The former combined marketplace split into exactly two repositories. Reinstall
-Kimi from this repository rather than expecting updates from
-`kimi@model-companions`. The new identity can make Claude Code supply a new
-`CLAUDE_PLUGIN_DATA` directory. Treat the old and new directories as separate
-private state roots: the companion does not merge, copy, or delete old state.
-Finish or cancel legacy jobs and exit Claude Code. Run
-`claude plugin list --json`, then uninstall every reported legacy scope with
-`claude plugin uninstall kimi@model-companions --scope user --keep-data`, using
-`project` or `local` instead of `user` where reported. Never enable both
-identities because their commands and MCP tools have the same names.
-
 ## Requirements and setup
 
 - Git
@@ -317,12 +306,11 @@ plugin inside an OS/container sandbox.
 Background providers run behind a detached guard. Cancellation and execution
 timeouts require confirmed cleanup of the managed process group before the
 companion reports a terminal state. Concurrency leases and cancellation
-controls remain available until the companion confirms cleanup, so a later cancel or
-status operation can recover the retained guard. The companion caps provider
-output before writing it to disk, and
-companion-authored diagnostics share that same combined artifact cap. The
-companion redacts, terminal-control-normalizes, and independently bounds stored
-job errors.
+controls remain available until the companion confirms cleanup, so a later
+cancel or status operation can recover the retained guard. The companion caps
+provider output before writing it to disk, and
+companion-authored diagnostics share that same combined artifact cap. Stored job
+job errors get redacted, terminal-control-normalized, and independently bounded.
 
 The provider process receives only the documented Kimi configuration channels
 needed for model access, network routing, and Windows Git Bash discovery. The
@@ -373,9 +361,10 @@ prompts and responses.
 
 Local usage records contain only operational metadata and byte counts. They do
 not contain prompt/output/diagnostic text, repository paths, credentials, PIDs,
-or worker tokens. The companion derives aggregates at query time. Tracking began in
-version 0.4.0, so earlier foreground runs and legacy background jobs are not
-retroactively counted.
+or worker tokens. The companion derives aggregates at query time. A job whose
+usage record is missing stays readable through `/kimi:status` and `/kimi:result`
+but does not count toward the aggregates, and `/kimi:usage` reports that
+exclusion in its coverage fields.
 
 On POSIX systems, ambient Kimi and Git lookup accepts only non-empty absolute
 `PATH` directories and rejects candidates whose canonical target is inside the

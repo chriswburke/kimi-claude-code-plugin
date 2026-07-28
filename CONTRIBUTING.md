@@ -17,9 +17,9 @@ Keep Kimi source, commands, tests, and documentation under `plugins/kimi`. The m
 
 `plugins/kimi/.claude-plugin/plugin.json` is the plugin version authority. Follow the [release guide](./docs/release-packages.md) for the local validation and packaging flow. Contributions must not publish packages, create releases, or invent repository URLs or support contacts.
 
-## Migrate safely
+## Keep the plugin single-provider
 
-This repository is one of exactly two successors to the former combined marketplace. Do not add another provider or restore shared provider tooling. The Kimi install identity changes the directory Claude Code supplies through `CLAUDE_PLUGIN_DATA`; do not write migration code or documentation that merges, copies, or removes an operator’s former private state automatically.
+This repository packages Kimi only. Do not add another provider or introduce shared provider tooling. Claude Code supplies the private state directory through `CLAUDE_PLUGIN_DATA`; do not write code or documentation that merges, copies, or removes an operator’s private state automatically.
 
 ## Report security concerns
 

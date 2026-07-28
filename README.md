@@ -6,7 +6,7 @@ Use Kimi Code from Claude Code for autonomous delegation, tool-constrained repos
 
 ## Install Kimi
 
-This is the Kimi half of the two-repository migration. Clone this repository, then run these commands in Claude Code from its root:
+Clone this repository, then run these commands in Claude Code from its root:
 
 ```text
 /plugin marketplace add .
@@ -28,24 +28,6 @@ Start with a request that cannot modify the checkout:
 ```
 
 `/kimi:ask` can modify files. Run it only in a checkout you trust.
-
-## Migrate from the combined marketplace
-
-The former `model-companions` marketplace has split into exactly two repositories: this Kimi repository and the separate GLM repository. Install Kimi from this repository as `kimi@model-companions-kimi`; do not expect updates through `kimi@model-companions`.
-
-The split also changes the Claude Code data-directory identity. Claude Code may set `CLAUDE_PLUGIN_DATA` to a new Kimi-specific directory after reinstalling. The companion treats the supplied directory as a separate private state root; it does not merge, copy, or delete data from the former combined installation. Keep the old directory until you have confirmed any retained jobs or usage records you need. Never move private state while a Kimi job is active.
-
-Before installing the new identity, finish or cancel every legacy Kimi job and inspect the local usage you need to retain. Exit Claude Code, then preserve the former data directory while removing the legacy installation:
-
-```bash
-claude plugin list --json
-claude plugin uninstall kimi@model-companions \
-  --scope user --keep-data
-```
-
-If the list reports a project or local installation, repeat the uninstall with `--scope project` or `--scope local`. Remove every reported legacy scope before continuing.
-
-Install `kimi@model-companions-kimi`, reload plugins, and run `/kimi:setup`. Do not enable the old and new identities together because both expose the `/kimi:*` command and MCP namespaces.
 
 ## Find the right guide
 

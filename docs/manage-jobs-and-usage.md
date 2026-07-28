@@ -51,5 +51,3 @@ Cleanup is a dry run by default. Confirmation can remove eligible terminal job a
 ## Recover interrupted work
 
 Run `/kimi:usage`, `/kimi:status`, `/kimi:setup`, or confirmed cleanup after an abrupt owner exit. The companion validates private recovery data, records an interrupted run when appropriate, and removes only authenticated artifacts. If it reports an unsafe state error, preserve the state root and correct the named ownership, symlink, or permission problem before retrying.
-
-After the two-repository migration, `CLAUDE_PLUGIN_DATA` can designate a new Kimi-specific state root. The companion does not combine it with old combined-installation data. Keep the older private directory until you have completed any required inspection.
