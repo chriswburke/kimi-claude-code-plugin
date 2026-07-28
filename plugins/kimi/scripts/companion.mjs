@@ -3186,7 +3186,7 @@ function resolveWindowsProvider(command, cwd, env, { explicit = false, label = "
   throw new CompanionError(`Provider executable not found on PATH: ${command}`);
 }
 
-function assertTrustedPosixExecutable(candidate, label = "provider") {
+function assertTrustedPosixExecutable(candidate, label = "provider", { checkDirectoryChain = true } = {}) {
   let resolved;
   try {
     resolved = fs.realpathSync(candidate);
@@ -3199,17 +3199,19 @@ function assertTrustedPosixExecutable(candidate, label = "provider") {
       throw new Error("unsafe executable ownership or permissions");
     }
 
-    let directory = path.dirname(resolved);
-    while (true) {
-      const directoryStat = fs.statSync(directory);
-      if (!directoryStat.isDirectory()
-          || !trustedOwners.has(directoryStat.uid)
-          || (directoryStat.mode & 0o022) !== 0) {
-        throw new Error("unsafe executable directory ownership or permissions");
+    if (checkDirectoryChain) {
+      let directory = path.dirname(resolved);
+      while (true) {
+        const directoryStat = fs.statSync(directory);
+        if (!directoryStat.isDirectory()
+            || !trustedOwners.has(directoryStat.uid)
+            || (directoryStat.mode & 0o022) !== 0) {
+          throw new Error("unsafe executable directory ownership or permissions");
+        }
+        const parent = path.dirname(directory);
+        if (parent === directory) break;
+        directory = parent;
       }
-      const parent = path.dirname(directory);
-      if (parent === directory) break;
-      directory = parent;
     }
     return resolved;
   } catch (error) {
@@ -3232,7 +3234,7 @@ function resolvePosixProvider(command, env, cwd, { explicit = false } = {}) {
     if (!path.isAbsolute(command)) {
       throw new CompanionError("KIMI_BIN must be absolute.", 1, "UNTRUSTED_PROVIDER_EXECUTABLE");
     }
-    return assertTrustedPosixExecutable(command);
+    return assertTrustedPosixExecutable(command, "provider", { checkDirectoryChain: false });
   }
   if (path.isAbsolute(command)) {
     throw new CompanionError("Ambient provider lookup accepts a command name, not an absolute path.", 1, "UNTRUSTED_PROVIDER_EXECUTABLE");
