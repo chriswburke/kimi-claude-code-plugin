@@ -1,33 +1,28 @@
-name: CI
+name: Release checks
 
+# The full matrix, packaging, and the pinned minimum Claude Code version. These
+# live outside CI so they do not appear as skipped jobs on every push.
 on:
   push:
-    branches: [main]
-  pull_request:
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A newer push to the same branch supersedes an in-flight run. Without this the
-# queue fills faster than the free runner pool drains it.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: release-checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Fast lane on every push and pull request. Windows is not covered: its
-  # suite has never passed, because the tests assert POSIX file modes and
-  # POSIX state paths. The Windows runtime paths stay in the code but are
-  # unverified, so the documentation calls them untested.
-  test:
-    name: test (${{ matrix.os }}, Node ${{ matrix.node }})
-    timeout-minutes: 20
+  release-matrix:
+    name: release (${{ matrix.os }}, Node ${{ matrix.node }})
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        node: ["18.18.0", "22"]
+        os: [ubuntu-latest, macos-latest]
+        node: ["18.18.0", "20", "22"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -36,13 +31,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
-      # setup-node installs into /opt/hostedtoolcache, which the runner image
-      # leaves group- or world-writable. The contract tests require a Node
-      # launcher whose whole ancestor chain is trusted, matching what the
-      # runtime enforces for a provider executable. Tighten the chain here
-      # rather than relaxing that check.
+      # setup-node installs into a group- or world-writable tool cache. The
+      # contract tests require a Node launcher whose whole ancestor chain is
+      # trusted, matching what the runtime enforces for a provider executable.
       - name: Trust the Node toolchain directory chain
-        if: runner.os != 'Windows'
         run: |
           target="$(readlink -f "$(command -v node)")"
           sudo chmod go-w "$target" || true
@@ -51,14 +43,16 @@ jobs:
             sudo chmod go-w "$directory" || true
             directory="$(dirname "$directory")"
           done
-          ls -ld "$target" "$(dirname "$target")"
-      - run: npm test
-      - run: npm run version:check
+      - run: npm run release:check
 
-  strict-validation:
-    name: Strict validation (Claude latest)
+  release-strict-validation:
+    name: Strict validation (Claude ${{ matrix.claude-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        claude-version: ["2.1.169", "latest"]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -66,7 +60,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-      - run: npm install --global "@anthropic-ai/claude-code@latest"
+      - run: npm install --global "@anthropic-ai/claude-code@${{ matrix.claude-version }}"
       - run: npm run validate
       - name: Smoke-test local marketplace install and independent upgrade
+        if: ${{ matrix.claude-version == 'latest' }}
         run: npm run test:claude-smoke

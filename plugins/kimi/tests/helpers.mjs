@@ -156,6 +156,19 @@ export function mcpExchange({ messages, responseId, env, cwd = pluginRoot, close
   });
 }
 
+export function usageRecordFiles(temporary) {
+  const workspaces = path.join(temporary, "state", "model-companions", "kimi", "workspaces");
+  if (!fs.existsSync(workspaces)) return [];
+  return fs.readdirSync(workspaces, { withFileTypes: true }).flatMap((entry) => {
+    if (!entry.isDirectory()) return [];
+    const directory = path.join(workspaces, entry.name, "usage");
+    if (!fs.existsSync(directory)) return [];
+    return fs.readdirSync(directory)
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => path.join(directory, name));
+  });
+}
+
 export function findFile(directory, suffix) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const target = path.join(directory, entry.name);

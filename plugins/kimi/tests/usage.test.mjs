@@ -12,7 +12,8 @@ import {
   poll,
   run,
   runtime,
-  temporaryDirectory
+  temporaryDirectory,
+  usageRecordFiles
 } from "./helpers.mjs";
 
 function usageJson(cwd, env, ...arguments_) {
@@ -26,18 +27,6 @@ function usageJson(cwd, env, ...arguments_) {
   return envelope.data;
 }
 
-function usageRecordFiles(temporary) {
-  const workspaces = path.join(temporary, "state", "model-companions", "kimi", "workspaces");
-  if (!fs.existsSync(workspaces)) return [];
-  return fs.readdirSync(workspaces, { withFileTypes: true }).flatMap((entry) => {
-    if (!entry.isDirectory()) return [];
-    const directory = path.join(workspaces, entry.name, "usage");
-    if (!fs.existsSync(directory)) return [];
-    return fs.readdirSync(directory)
-      .filter((name) => name.endsWith(".json"))
-      .map((name) => path.join(directory, name));
-  });
-}
 
 function runAsync(args, options) {
   return new Promise((resolve, reject) => {

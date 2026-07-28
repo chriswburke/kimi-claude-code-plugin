@@ -14,7 +14,8 @@ import {
   poll,
   run,
   runtime,
-  temporaryDirectory
+  temporaryDirectory,
+  usageRecordFiles
 } from "./helpers.mjs";
 
 function runAsync(args, options = {}) {
@@ -418,6 +419,14 @@ test("guard lease loss cleans providers after a worker crash", { skip: process.p
   const metadataPath = await poll(() => findFile(path.join(temporary, "state"), `${id}.json`));
   const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
   assert.ok(metadata.workerPid);
+  // The guard reports the provider start over IPC and the worker persists
+  // launched:true when it handles that message. The fake provider's record file
+  // appears first, so killing on that signal alone races the accounting this
+  // test asserts.
+  await poll(() => usageRecordFiles(temporary).some((file) => {
+    try { return JSON.parse(fs.readFileSync(file, "utf8")).launched === true; }
+    catch { return false; }
+  }));
   process.kill(metadata.workerPid, "SIGKILL");
   await poll(() => !isAlive(pids.providerPid) && !isAlive(pids.grandchildPid));
   await poll(() => /\tinterrupted\t/.test(run(["status", id], { cwd: repository, env }).stdout));

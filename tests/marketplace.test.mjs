@@ -67,15 +67,20 @@ test("root scripts and release workflow are Kimi-only", () => {
 
 test("validation, dependency, release, and canary workflows keep bounded trust", () => {
   const ci = workflow("ci.yml");
-  // Push and pull requests run Linux only; the release lane adds macOS. Windows
-  // is deliberately absent because its suite has never passed, and the README
-  // documents those runtime paths as untested.
+  const releaseChecks = workflow("release-checks.yml");
+  // Push and pull requests run Linux only. The release workflow adds macOS and
+  // the full Node range. Windows is deliberately absent from both because its
+  // suite has never passed, and the README documents it as untested.
   assert.match(ci, /os: \[ubuntu-latest\]/);
-  assert.match(ci, /os: \[ubuntu-latest, macos-latest\]/);
-  assert.doesNotMatch(ci, /windows-latest/);
-  assert.match(ci, /node: \["18\.18\.0", "20", "22"\]/);
-  assert.match(ci, /claude-version:\s*\["2\.1\.169", "latest"\]/);
-  assert.match(ci, /matrix\.claude-version == 'latest'[\s\S]*npm run test:claude-smoke/);
+  assert.doesNotMatch(ci, /windows-latest|macos-latest/);
+  assert.match(releaseChecks, /os: \[ubuntu-latest, macos-latest\]/);
+  assert.doesNotMatch(releaseChecks, /windows-latest/);
+  assert.match(releaseChecks, /node: \["18\.18\.0", "20", "22"\]/);
+  assert.match(releaseChecks, /claude-version:\s*\["2\.1\.169", "latest"\]/);
+  assert.match(releaseChecks, /matrix\.claude-version == 'latest'[\s\S]*npm run test:claude-smoke/);
+  // The release lane must stay off the push path so it cannot appear as a
+  // skipped job on every commit.
+  assert.match(releaseChecks, /^on:\n  push:\n    tags: \["v\*"\]/m);
 
   const dependabot = fs.readFileSync(path.join(ROOT, ".github", "dependabot.yml"), "utf8");
   assert.match(dependabot, /package-ecosystem: github-actions/);
@@ -91,7 +96,7 @@ test("validation, dependency, release, and canary workflows keep bounded trust",
   assert.match(canary, /--model "\$KIMI_MODEL_NAME"/);
   assert.doesNotMatch(canary, /GLM|ZAI_|extended_glm|inputs\.provider/i);
 
-  for (const source of [ci, workflow("release-artifacts.yml"), canary]) {
+  for (const source of [ci, releaseChecks, workflow("release-artifacts.yml"), canary]) {
     for (const match of source.matchAll(/^\s*-?\s*uses:\s*([^\s#]+)/gm)) {
       assert.match(match[1], /@[0-9a-f]{40}$/, `workflow action is not pinned: ${match[1]}`);
     }
