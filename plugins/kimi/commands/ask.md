@@ -2,7 +2,7 @@
 description: Delegate a coding task to Kimi Code
 argument-hint: "[--background] [--model <model> | --profile <profile>] [--label <label>] [--timeout <duration>] <task>"
 disable-model-invocation: true
-disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* T* U* V* W* X* Y* Z*"
+disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* Task* Todo* U* V* W* X* Y* Z*"
 hooks:
   PreToolUse:
     - matcher: "*"

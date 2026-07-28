@@ -36,7 +36,13 @@ test("the package is a version-matched, self-contained Kimi plugin", () => {
 test("all slash commands are MCP-only and use the Kimi namespace", () => {
   const commandDirectory = path.join(pluginRoot, "commands");
   const commands = fs.readdirSync(commandDirectory).sort();
-  const uppercaseDenyRules = Array.from({ length: 26 }, (_, index) => `${String.fromCharCode(65 + index)}*`);
+  // T* is narrowed to Task* and Todo* so ToolSearch stays available. Claude
+  // Code defers MCP tool definitions by default, and a command that cannot
+  // load its companion tool's schema cannot call it.
+  const uppercaseDenyRules = Array.from({ length: 26 }, (_, index) => {
+    const letter = String.fromCharCode(65 + index);
+    return letter === "T" ? "Task* Todo*" : `${letter}*`;
+  }).join(" ").split(" ");
   assert.deepEqual(commands, [
     "ask.md", "cancel.md", "cleanup.md", "config.md", "explore.md", "models.md", "plan.md",
     "result.md", "review.md", "session.md", "setup.md", "status.md", "usage.md"

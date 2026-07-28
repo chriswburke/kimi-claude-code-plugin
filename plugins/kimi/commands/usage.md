@@ -2,7 +2,7 @@
 description: Show local Kimi companion activity and quota guidance
 argument-hint: "[--local] [--json] [--window today|24h|7d|30d|all] [--scope repo|all] [--group-by day|model|kind|outcome]"
 disable-model-invocation: true
-disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* T* U* V* W* X* Y* Z*"
+disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* Task* Todo* U* V* W* X* Y* Z*"
 hooks:
   PreToolUse:
     - matcher: "*"

@@ -2,7 +2,7 @@
 description: Preview or remove old local Kimi companion records
 argument-hint: "--older-than <duration> [--scope repo|all] [--dry-run | --confirm] [--json]"
 disable-model-invocation: true
-disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* T* U* V* W* X* Y* Z*"
+disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* Task* Todo* U* V* W* X* Y* Z*"
 hooks:
   PreToolUse:
     - matcher: "*"

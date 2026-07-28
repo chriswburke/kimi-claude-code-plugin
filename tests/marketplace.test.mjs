@@ -126,7 +126,14 @@ test("the marketplace entry is a self-contained, version-matched package", () =>
 });
 
 test("Kimi commands are MCP-only, package-namespaced, and deny GLM tool names", () => {
-  const uppercaseDenyRules = Array.from({ length: 26 }, (_, index) => `${String.fromCharCode(65 + index)}*`);
+  // Every built-in is denied by first letter, except that T* is narrowed to
+  // Task* and Todo*. Claude Code defers MCP tool definitions by default, so
+  // removing ToolSearch from the pool would make the companion tool
+  // impossible to load and the command impossible to run.
+  const uppercaseDenyRules = Array.from({ length: 26 }, (_, index) => {
+    const letter = String.fromCharCode(65 + index);
+    return letter === "T" ? "Task* Todo*" : `${letter}*`;
+  }).join(" ").split(" ");
   const expected = ["ask.md", "cancel.md", "cleanup.md", "config.md", "explore.md", "models.md", "plan.md", "result.md", "review.md", "session.md", "setup.md", "status.md", "usage.md"];
   const routedTools = { ask: "run_task", cancel: "cancel", cleanup: "cleanup", config: "config", explore: "explore", models: "models", plan: "plan", result: "result", review: "review", session: "session", setup: "setup", status: "status", usage: "usage" };
   const commandRoot = path.join(KIMI_ROOT, "commands");

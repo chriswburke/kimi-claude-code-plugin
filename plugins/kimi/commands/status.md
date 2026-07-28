@@ -2,7 +2,7 @@
 description: Show Kimi companion jobs for this repository
 argument-hint: "[job-id] [--active | --all] [--limit <n>] [--json]"
 disable-model-invocation: true
-disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* T* U* V* W* X* Y* Z*"
+disallowed-tools: "A* B* C* D* E* F* G* H* I* J* K* L* M* N* O* P* Q* R* S* Task* Todo* U* V* W* X* Y* Z*"
 hooks:
   PreToolUse:
     - matcher: "*"
