@@ -13,12 +13,12 @@ Kimi commands use narrow tool routing and recoverable process guards. They prote
 
 ## Command boundaries
 
-Each slash command removes Claude Code built-in tools for its invocation and routes one package-namespaced Kimi MCP operation through a fail-closed scoped gate. Command text crosses MCP as JSON, not shell syntax; the runtime launches the Kimi binary with an argument array.
+Each slash command removes Claude Code built-in tools for its invocation and routes one package-namespaced Model Context Protocol (MCP) operation through a fail-closed scoped gate. Command text reaches MCP as JSON, not shell syntax, and the runtime launches the Kimi binary with an argument array. Each command has a distinct boundary:
 
 - `/kimi:ask` is autonomous and can modify a trusted checkout.
 - `/kimi:explore` and `/kimi:plan` use a request-local agent that grants only `Read`, `Grep`, and `Glob`.
 - `/kimi:review` receives precomputed Git context with empty tool and skill allowlists.
-- Experimental `/kimi:session` passes an empty Claude-side MCP server list to ACP.
+- Experimental `/kimi:session` passes an empty Claude-side MCP server list to the Agent Client Protocol (ACP).
 
 The gate does not replace local or managed Claude Code policy. A disabled hook falls back to that policy’s normal companion-tool decision.
 
@@ -26,7 +26,7 @@ The gate does not replace local or managed Claude Code policy. A disabled hook f
 
 Kimi’s documented CLI cannot disable its user-level hooks or MCP startup configuration. That configuration can launch code outside the request-local boundary. Use a dedicated Kimi home without extensions, or an operating-system/container sandbox, when you need a narrower trust base.
 
-Managed guards provide cancellation, deadlines, owner-loss recovery, and process-group cleanup. They are not an OS sandbox: on POSIX they cover descendants that remain in the launched process group, but a process can escape by daemonizing or creating a new session. Use a container, virtual machine, cgroup, job boundary, or another OS sandbox for hard containment.
+Managed guards handle cancellation, deadlines, owner-loss recovery, and process-group cleanup. They are not an operating-system sandbox. On POSIX they cover descendants that remain in the launched process group, but a process escapes that group by daemonizing or creating a new session. Use a container, virtual machine, cgroup, job boundary, or another operating-system sandbox for hard containment.
 
 ## Private state and executable trust
 

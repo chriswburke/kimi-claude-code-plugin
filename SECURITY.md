@@ -6,7 +6,7 @@ Use the newest Kimi plugin release before reporting a vulnerability. This projec
 
 Use the hosting platform’s private vulnerability-reporting feature when available. Include the Kimi plugin version, impact, reproduction steps, and any proposed mitigation.
 
-Do not include Kimi credentials, private model output, or exploit details in a public issue. If no private reporting feature appears, open a minimal issue asking a maintainer to establish a private channel and omit sensitive details until that channel exists.
+Do not include Kimi credentials, private model output, or exploit details in a public issue. If no private reporting feature appears, open a minimal issue asking a maintainer to establish a private channel. Omit sensitive details until that channel exists.
 
 ## Report a non-sensitive security bug
 

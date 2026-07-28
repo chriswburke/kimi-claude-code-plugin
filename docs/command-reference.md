@@ -56,8 +56,8 @@ Kimi accepts positive durations with `ms`, `s`, `m`, `h`, or `d`, including `250
 | `/kimi:models`, `/kimi:config`, `/kimi:setup` | Local diagnostics without model inference; sensitive configuration is redacted |
 | `/kimi:status`, `/kimi:result`, `/kimi:cancel` | Repository-scoped managed-job operations |
 | `/kimi:usage`, `/kimi:cleanup` | Private local ledger and retained-artifact operations |
-| `/kimi:session` | Experimental ACP bridge; every action requires `--experimental` |
+| `/kimi:session` | Experimental Agent Client Protocol (ACP) bridge; every action requires `--experimental` |
 
-`/kimi:result --wait` bounds observation, not the provider execution deadline. `/kimi:cleanup` previews by default; `--confirm` is required to remove eligible terminal artifacts or aged usage records. The native Kimi session store is outside plugin cleanup.
+`/kimi:result --wait` bounds observation, not the provider execution deadline. `/kimi:cleanup` previews by default, and `--confirm` removes eligible terminal artifacts or aged usage records. The native Kimi session store is outside plugin cleanup.
 
 All JSON-capable commands return the version-2 envelope. A retrieved terminal job is a successful result operation even when its provider outcome was failed, cancelled, timed out, or output-limited. See [structured output](./structured-output-v2.md) and the [package reference](../plugins/kimi/README.md) for complete limits.

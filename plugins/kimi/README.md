@@ -9,7 +9,7 @@ provider package in this repository and is published as
 
 The former combined marketplace split into exactly two repositories. Reinstall
 Kimi from this repository rather than expecting updates from
-`kimi@model-companions`. The new identity can make Claude Code provide a new
+`kimi@model-companions`. The new identity can make Claude Code supply a new
 `CLAUDE_PLUGIN_DATA` directory. Treat the old and new directories as separate
 private state roots: the companion does not merge, copy, or delete old state.
 Finish or cancel legacy jobs and exit Claude Code. Run
@@ -50,7 +50,7 @@ and `--add-dir` capabilities used for tool-constrained workflows, and runs
 built-in profiles alongside models reported by the configured CLI, while
 `/kimi:config` shows the companion’s effective configuration with sensitive
 values redacted. Each accepts `--json`; none starts a model inference.
-Authentication is confirmed only by a delegated request.
+Only a delegated request confirms authentication.
 
 ## Commands
 
@@ -167,7 +167,7 @@ MiB result-rendering preview remains separate from the retained-artifact cap.
 
 ### Background jobs
 
-Background jobs are scoped to the current Git repository and retain the
+Kimi scopes background jobs to the current Git repository. They retain the
 existing Kimi state namespace, so upgrades preserve visibility of older jobs.
 `/kimi:status` shows the 10 most recent jobs across statuses by default.
 `--active` filters to active jobs, `--all` removes the default limit for the
@@ -241,7 +241,7 @@ The same commands recover a background launch that stopped before durable job
 handoff. The companion validates its provisional manifest and linked usage
 record, removes its prompt and concurrency slot, and records the launch as
 `interrupted`. If durable job metadata exists, that job owns the remaining
-lifecycle and the redundant provisional manifest is removed. Recovery also
+lifecycle and recovery removes the redundant provisional manifest. Recovery also
 removes exact-target atomic-write temporaries linked to the stopped manifest,
 but only after its recorded owner has exited and each temporary remains a
 stable private regular file. Unknown or lookalike files remain as fail-closed
@@ -304,8 +304,8 @@ grant.
 
 Each read-only request creates its own custom-agent and empty-skills boundary.
 Explore and plan can read repository files through their narrow tool allowlist;
-review sees only the precomputed Git context. Repository content is treated as
-untrusted data in both cases.
+review sees only the precomputed Git context. Both modes treat repository
+content as untrusted data.
 
 This is a tool boundary, not an operating-system sandbox. The documented Kimi
 CLI does not expose a switch that disables existing user-level hooks or MCP
@@ -315,12 +315,14 @@ dedicated Kimi configuration/home with no hooks or user MCP servers, or run the
 plugin inside an OS/container sandbox.
 
 Background providers run behind a detached guard. Cancellation and execution
-timeouts require confirmed cleanup of the managed process group before a
-terminal state is reported. Concurrency leases and cancellation controls remain available while
-cleanup is unconfirmed, so a later cancel/status operation can recover the
-retained guard. Provider output is capped before it is written to disk, and
-companion-authored diagnostics share that same combined artifact cap. Stored job
-errors are redacted, terminal-control-normalized, and bounded independently.
+timeouts require confirmed cleanup of the managed process group before the
+companion reports a terminal state. Concurrency leases and cancellation
+controls remain available until the companion confirms cleanup, so a later cancel or
+status operation can recover the retained guard. The companion caps provider
+output before writing it to disk, and
+companion-authored diagnostics share that same combined artifact cap. The
+companion redacts, terminal-control-normalizes, and independently bounds stored
+job errors.
 
 The provider process receives only the documented Kimi configuration channels
 needed for model access, network routing, and Windows Git Bash discovery. The
@@ -333,8 +335,8 @@ The guard is lifecycle control, not an OS sandbox. On POSIX it covers
 descendants that remain in the launched process group. Portable Node.js cannot
 reliably identify or terminate a child that deliberately daemonizes or creates
 a new session; analogous breakaway behavior exists on other platforms. Use a
-container, virtual machine, cgroup/job boundary, or another OS sandbox when
-hard containment of untrusted subprocesses is required.
+container, virtual machine, cgroup/job boundary, or another OS sandbox when you
+need hard containment of untrusted subprocesses.
 
 Foreground tasks and experimental session turns keep a strict private recovery
 manifest until managed-group cleanup and local usage accounting both finish. If
@@ -371,7 +373,7 @@ prompts and responses.
 
 Local usage records contain only operational metadata and byte counts. They do
 not contain prompt/output/diagnostic text, repository paths, credentials, PIDs,
-or worker tokens. Aggregates are derived at query time. Tracking began in
+or worker tokens. The companion derives aggregates at query time. Tracking began in
 version 0.4.0, so earlier foreground runs and legacy background jobs are not
 retroactively counted.
 

@@ -128,6 +128,15 @@ function normalizeStoredJobError(value, fallback = "Kimi companion operation fai
   return (normalized || fallback).slice(0, MAX_JOB_ERROR_CHARS);
 }
 
+// A cleanup failure raised from finally must not replace the failure that
+// caused it: report the original and append the cleanup detail to it.
+function withSuppressedCleanupError(primaryError, cleanupError) {
+  if (!primaryError) return cleanupError;
+  const detail = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+  if (detail && primaryError instanceof Error) primaryError.message = `${primaryError.message}\nCleanup also failed: ${detail}`;
+  return primaryError;
+}
+
 function boundedUtf8Text(value, maximumBytes) {
   const encoded = Buffer.from(value, "utf8");
   if (encoded.length <= maximumBytes) return value;
@@ -553,7 +562,9 @@ function resolveGitExecutable(cwd, env) {
 }
 
 function dataRoot({ create = true } = {}) {
-  const configured = process.env.CLAUDE_PLUGIN_DATA || process.env.MODEL_COMPANION_STATE_DIR;
+  // MODEL_COMPANION_STATE_DIR exists only to override the managed location, so
+  // it outranks the Claude Code default rather than being silently ignored.
+  const configured = process.env.MODEL_COMPANION_STATE_DIR || process.env.CLAUDE_PLUGIN_DATA;
   const base = path.resolve(configured || path.join(os.homedir(), ".cache"));
   const middle = path.join(base, configured ? "model-companions" : "model-companions-cc");
   const root = path.join(middle, PROVIDER);
@@ -3036,10 +3047,13 @@ async function buildReviewContext(parsed, cwd, signal) {
 
   let untrackedBytes = 0;
   const untrackedSections = [];
+  // Untracked content gets half the configured aggregate so it cannot crowd out
+  // the diffs. The renderer still applies the aggregate bound afterwards.
+  const untrackedBudget = Math.floor(reviewContextBytes / 2);
   for (const entry of status.stdout.split("\0")) {
     if (!entry.startsWith("?? ")) continue;
     const relative = entry.slice(3);
-    const opened = readBoundedUntrackedFile(root, relative, 2 * 1024 * 1024 - untrackedBytes);
+    const opened = readBoundedUntrackedFile(root, relative, untrackedBudget - untrackedBytes);
     if (!opened) continue;
     if (opened.skipped) {
       untrackedSections.push(`### ${relative}\n(skipped: file exceeds review context limit)`);
@@ -3609,6 +3623,7 @@ async function sessionRequest(rawArguments, cwd, signal) {
   let terminalOutcome = "failed";
   let terminalErrorText = "";
   let treeClosed = false;
+  let primaryError;
   try {
     const rendered = await withAcp(root, signal, async ({ request, assistantChunks }) => {
       let sessionId;
@@ -3640,6 +3655,7 @@ async function sessionRequest(rawArguments, cwd, signal) {
     terminalOutcome = "finished";
     return rendered;
   } catch (error) {
+    primaryError = error;
     terminalOutcome = sessionUsageOutcome(error);
     terminalErrorText = error instanceof Error ? error.message : String(error);
     throw error;
@@ -3666,7 +3682,7 @@ async function sessionRequest(rawArguments, cwd, signal) {
     if (!manifestError && usageRecord?.outcome === null) {
       manifestError = new CompanionError("Session accounting could not be finalized; recovery metadata was retained.", 1, "FOREGROUND_ACCOUNTING_PENDING");
     }
-    if (manifestError) throw manifestError;
+    if (manifestError) throw withSuppressedCleanupError(primaryError, manifestError);
   }
 }
 
@@ -4290,6 +4306,7 @@ async function runForeground(kind, parsed, cwd, signal, usage) {
   let limitMonitor;
   let terminalOutcome = "failed";
   let terminalErrorText = "";
+  let primaryError;
   let executionStore;
   let slotId;
   let foregroundId;
@@ -4404,6 +4421,7 @@ async function runForeground(kind, parsed, cwd, signal, usage) {
     const safeDiagnostics = sanitizeRenderedText(diagnostics);
     return safeDiagnostics ? `${safeOutput || "(request completed without output)"}\n\nWarnings:\n${safeDiagnostics}` : safeOutput;
   } catch (error) {
+    primaryError = error;
     terminalOutcome = error instanceof CompanionError && error.exitCode === 130
       ? "cancelled"
       : error instanceof CompanionError && error.code === "RUN_TIMEOUT"
@@ -4494,8 +4512,7 @@ async function runForeground(kind, parsed, cwd, signal, usage) {
     if (!cleanupError && usageRecord?.outcome === null) {
       cleanupError = new CompanionError("Foreground accounting could not be finalized; recovery metadata was retained.", 1, "FOREGROUND_ACCOUNTING_PENDING");
     }
-    if (terminationError) throw terminationError;
-    if (cleanupError) throw cleanupError;
+    if (terminationError || cleanupError) throw withSuppressedCleanupError(primaryError, terminationError || cleanupError);
   }
 }
 
@@ -4553,7 +4570,7 @@ async function startBackground(kind, parsed, cwd, signal, usage, provision) {
     bindExecutionSlot(store, slotId, id);
     if (signal?.aborted) throw new CompanionError(`${PROVIDER_LABEL} request was cancelled.`, 130);
 
-    const workerState = process.env.CLAUDE_PLUGIN_DATA || process.env.MODEL_COMPANION_STATE_DIR || "";
+    const workerState = process.env.MODEL_COMPANION_STATE_DIR || process.env.CLAUDE_PLUGIN_DATA || "";
     const workerEnv = isolatedRuntimeEnvironment({ MODEL_COMPANION_STATE_DIR: workerState });
     child = spawn(process.execPath, [SCRIPT_PATH, "_worker", id, token, built.cwd], {
       cwd: built.cwd,
