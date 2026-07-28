@@ -36,6 +36,16 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
+      # The runner home and work directories are group- or world-writable, which
+      # the executable-trust check correctly refuses. Tighten the checkout chain
+      # so the fake provider can run, rather than weakening that check.
+      - name: Tighten the checkout directory chain
+        if: runner.os != 'Windows'
+        run: |
+          ls -ld / /home /home/runner /home/runner/work "$GITHUB_WORKSPACE"
+          chmod go-w /home/runner /home/runner/work "$GITHUB_WORKSPACE" || true
+          echo "--- after ---"
+          ls -ld / /home /home/runner /home/runner/work "$GITHUB_WORKSPACE"
       - run: npm test
       - run: npm run version:check
 
