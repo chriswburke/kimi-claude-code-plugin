@@ -77,6 +77,11 @@ test("the packaged Kimi tool gate allows only its configured namespaced tool", (
   assert.equal(allowed.status, 0, allowed.stderr);
   assert.equal(permission(allowed), "allow");
 
+  // Commands must be able to load their deferred companion tool schema.
+  const schemaLookup = invoke(expectedTool, "ToolSearch");
+  assert.equal(schemaLookup.status, 0, schemaLookup.stderr);
+  assert.equal(permission(schemaLookup), "allow");
+
   for (const denied of [
     invoke(expectedTool, "Bash"),
     invoke(expectedTool, "mcp__plugin_kimi_companion__status"),

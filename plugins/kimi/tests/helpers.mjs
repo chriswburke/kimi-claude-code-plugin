@@ -10,6 +10,8 @@ export const runtime = path.join(pluginRoot, "scripts", "companion.mjs");
 export const fixture = path.join(pluginRoot, "tests", "fixtures", "fake-kimi.mjs");
 let fakeConfigCounter = 0;
 let temporaryBase;
+const temporaryDirectories = [];
+let temporaryCleanupRegistered = false;
 
 // Mirrors assertTrustedPosixExecutable in the runtime: a directory and every
 // ancestor must be owned by this user or root and must not be group- or
@@ -49,9 +51,23 @@ function temporaryRoot() {
   return (temporaryBase = os.tmpdir());
 }
 
+// Suites create large numbers of temporary repositories. Sweep them on process
+// exit so the shared temp dir (and the $HOME fallback) stays clean; suites that
+// remove their own directories make the sweep a no-op.
+function removeTemporaryDirectories() {
+  for (const directory of temporaryDirectories.splice(0)) {
+    try { fs.rmSync(directory, { recursive: true, force: true }); } catch { /* Best-effort test cleanup. */ }
+  }
+}
+
 export function temporaryDirectory() {
   const directory = fs.mkdtempSync(path.join(temporaryRoot(), "kimi-companion-test-"));
   try { fs.chmodSync(directory, 0o700); } catch { /* Windows inherits its parent ACL. */ }
+  if (!temporaryCleanupRegistered) {
+    temporaryCleanupRegistered = true;
+    process.on("exit", removeTemporaryDirectories);
+  }
+  temporaryDirectories.push(directory);
   return directory;
 }
 
@@ -170,7 +186,14 @@ export function usageRecordFiles(temporary) {
 }
 
 export function findFile(directory, suffix) {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+  let entries;
+  try { entries = fs.readdirSync(directory, { withFileTypes: true }); }
+  catch (error) {
+    // State entries such as retired lock directories vanish while tests poll.
+    if (error?.code === "ENOENT") return undefined;
+    throw error;
+  }
+  for (const entry of entries) {
     const target = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       const nested = findFile(target, suffix);

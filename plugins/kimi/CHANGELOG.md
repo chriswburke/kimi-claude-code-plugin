@@ -27,3 +27,12 @@ First release, published as `kimi@model-companions-kimi` with source nested at
 - Private local usage accounting with no provider prompt or quota scraping.
 - Review isolation, Git preprocessing, managed process-group cancellation,
   local state permissions, prompt cleanup, and installed-copy hardening.
+- Slash commands load their deferred companion tool schema through ToolSearch,
+  and review, explore, and plan ask Kimi for Markdown with clickable path:line
+  citations.
+- Unauthenticated provider-guard liveness is trusted only within the heartbeat
+  grace window, so a reused process identifier cannot pin a dead job active.
+- The MCP server declares the protocol version it implements rather than
+  echoing the version a client proposes.
+- Continuous integration pins its Claude Code and Kimi Code installs, including
+  the provider canary that runs with an API key.

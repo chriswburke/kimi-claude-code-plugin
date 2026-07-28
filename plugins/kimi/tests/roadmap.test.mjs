@@ -231,6 +231,40 @@ test("managed job filters, labels, result waiting, and cancellation ambiguity ar
   }
 });
 
+test("a result wait timeout leaves the background job running", async () => {
+  const repository = createChangedRepository();
+  const temporary = temporaryDirectory();
+  const env = fakeEnvironment(temporary, { FAKE_PROVIDER_MODE: "wait" });
+  const id = jobId(run(["run", "task", "--background", "slow", "wait"], { cwd: repository, env }));
+  await poll(() => /\trunning\t/.test(run(["status", id], { cwd: repository, env }).stdout));
+
+  const timedOut = readEnvelope(run(["result", id, "--wait", "--timeout", "300ms", "--json"], { cwd: repository, env, timeout: 15_000 }), "result", 124);
+  assert.equal(timedOut.error.code, "RESULT_WAIT_TIMEOUT");
+  assert.equal(timedOut.error.retryable, true);
+
+  const status = readEnvelope(run(["status", id, "--json"], { cwd: repository, env }), "status").data;
+  assert.equal(status.jobs[0].id, id);
+  assert.equal(status.jobs[0].status, "running");
+
+  const cancelled = readEnvelope(run(["cancel", id, "--json"], { cwd: repository, env, timeout: 15_000 }), "cancel").data;
+  assert.equal(cancelled.job.status, "cancelled");
+});
+
+test("the concurrency limit rejects a run while a job occupies its slot", async () => {
+  const repository = createChangedRepository();
+  const temporary = temporaryDirectory();
+  const env = fakeEnvironment(temporary, { FAKE_PROVIDER_MODE: "wait", KIMI_COMPANION_MAX_CONCURRENCY: "1" });
+  const id = jobId(run(["run", "task", "--background", "occupies", "slot"], { cwd: repository, env }));
+  await poll(() => /\trunning\t/.test(run(["status", id], { cwd: repository, env }).stdout));
+
+  const rejected = run(["run", "task", "--background", "second", "task"], { cwd: repository, env });
+  assert.equal(rejected.status, 1);
+  assert.match(rejected.stderr, /concurrency limit reached/);
+
+  const cancelled = readEnvelope(run(["cancel", id, "--json"], { cwd: repository, env, timeout: 15_000 }), "cancel").data;
+  assert.equal(cancelled.job.status, "cancelled");
+});
+
 test("execution timeout and output limit become distinct terminal job outcomes", async () => {
   const repository = createChangedRepository();
   const temporary = temporaryDirectory();

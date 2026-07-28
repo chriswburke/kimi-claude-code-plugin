@@ -57,7 +57,7 @@ jobs:
       - run: npm run version:check
 
   strict-validation:
-    name: Strict validation (Claude latest)
+    name: Strict validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -67,7 +67,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-      - run: npm install --global "@anthropic-ai/claude-code@latest"
+      # Pinned for supply-chain safety; keep in step with release-artifacts.yml.
+      - run: npm install --global "@anthropic-ai/claude-code@2.1.169"
       - run: npm run validate
       - name: Smoke-test local marketplace install and independent upgrade
         run: npm run test:claude-smoke

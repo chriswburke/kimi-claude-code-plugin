@@ -60,6 +60,7 @@ const STABLE_READ_ATTEMPTS = 8;
 const MAX_ACP_FRAME_BYTES = 4 * 1024 * 1024;
 const MAX_MCP_FRAME_BYTES = 4 * 1024 * 1024;
 const MAX_MCP_ACTIVE_REQUESTS = 32;
+const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MAX_RESULT_RENDER_BYTES = 1024 * 1024;
 const MAX_JOB_ERROR_CHARS = 4096;
 const MAX_GUARD_ERROR_MESSAGE_BYTES = 4096;
@@ -760,10 +761,10 @@ function boundArtifactFiles(outputPath, errorPath, maximumBytes) {
   }
 }
 
-function utf8SafePrefix(buffer, maximumBytes) {
-  const limit = Math.min(buffer.length, Math.max(0, maximumBytes));
-  if (limit === buffer.length) return buffer;
-  let safeOffset = limit;
+// Length of the longest prefix of buffer[0..end) that does not split a UTF-8
+// sequence, for byte caps that may cut through a code point.
+function utf8SafeCutLength(buffer, end) {
+  let safeOffset = end;
   if (safeOffset > 0) {
     let lead = safeOffset - 1;
     while (lead >= 0 && (buffer[lead] & 0xc0) === 0x80 && safeOffset - lead <= 4) lead -= 1;
@@ -776,7 +777,13 @@ function utf8SafePrefix(buffer, maximumBytes) {
       if (expected > 1 && safeOffset - lead < expected) safeOffset = lead;
     }
   }
-  return buffer.subarray(0, safeOffset);
+  return safeOffset;
+}
+
+function utf8SafePrefix(buffer, maximumBytes) {
+  const limit = Math.min(buffer.length, Math.max(0, maximumBytes));
+  if (limit === buffer.length) return buffer;
+  return buffer.subarray(0, utf8SafeCutLength(buffer, limit));
 }
 
 function appendBoundedArtifactDiagnostic(outputPath, errorPath, message, maximumBytes) {
@@ -821,6 +828,26 @@ function saveUsageRecord(store, record) {
   const document = usageRecordDocument(record);
   atomicWriteJson(usageFile(store, document.id), document);
   return document;
+}
+
+// Usage records cross process boundaries through the private state directory,
+// so every reader re-validates the stored shape against its expected linkage
+// instead of trusting what it finds on disk.
+function validUsageRecordShape(raw, { id, execution, kind, jobId }) {
+  return raw?.schemaVersion === USAGE_SCHEMA_VERSION
+    && raw?.provider === PROVIDER
+    && raw?.id === id
+    && raw?.execution === execution
+    && raw?.kind === kind
+    && raw?.jobId === jobId
+    && typeof raw?.launched === "boolean"
+    && (raw?.requestedModel === null || (typeof raw.requestedModel === "string" && MODEL_PATTERN.test(raw.requestedModel)))
+    && (raw?.outcome === null || FINAL_STATUSES.has(raw.outcome))
+    && raw?.lifecycle && validIsoTimestamp(raw.lifecycle.createdAt)
+    && (raw.lifecycle.startedAt == null || validIsoTimestamp(raw.lifecycle.startedAt))
+    && (raw.lifecycle.finishedAt == null || validIsoTimestamp(raw.lifecycle.finishedAt))
+    && (raw.lifecycle.durationMs == null || (Number.isSafeInteger(raw.lifecycle.durationMs) && raw.lifecycle.durationMs >= 0))
+    && raw?.bytes && [raw.bytes.prompt, raw.bytes.output, raw.bytes.error].every((value) => Number.isSafeInteger(value) && value >= 0);
 }
 
 function createUsageTracker(cwd, execution, kind, requestedModel, { id: requestedId, jobId = null } = {}) {
@@ -1098,19 +1125,9 @@ function readPrivateTextPrefix(file, maximumReturnedBytes, maximumStoredBytes) {
       if (bytes === 0) break;
       offset += bytes;
     }
-    let safeOffset = offset;
-    if (offset < opened.size && offset > 0) {
-      let lead = offset - 1;
-      while (lead >= 0 && (buffer[lead] & 0xc0) === 0x80 && offset - lead <= 4) lead -= 1;
-      if (lead >= 0) {
-        const byte = buffer[lead];
-        const expected = byte >= 0xf0 && byte <= 0xf4 ? 4
-          : byte >= 0xe0 && byte <= 0xef ? 3
-            : byte >= 0xc2 && byte <= 0xdf ? 2
-              : 1;
-        if (expected > 1 && offset - lead < expected) safeOffset = lead;
-      }
-    }
+    // The stored file may continue past what was read, so the buffer tail may
+    // cut a UTF-8 sequence even when the buffer itself is full.
+    const safeOffset = offset < opened.size ? utf8SafeCutLength(buffer, offset) : offset;
     return {
       text: buffer.subarray(0, safeOffset).toString("utf8"),
       totalBytes: opened.size,
@@ -1635,7 +1652,10 @@ function acquireStateLock(file, description, { attempts = 200, waitMs = 5 } = {}
         acquired = true;
         return owner;
       }
-      recoverAbandonedStateLock(file);
+      // Recovery spawns ps to verify the holder's birth identity, so run it on
+      // the first failure and then only periodically: recovery on every retry
+      // would block the event loop with hundreds of subprocess spawns.
+      if (attempt === 0 || attempt % 25 === 24) recoverAbandonedStateLock(file);
       Atomics.wait(LOCK_WAIT_ARRAY, 0, 0, waitMs);
     }
   } finally {
@@ -1663,10 +1683,20 @@ function releaseStateLock(file, owner) {
 
 function withStateLock(file, description, action) {
   const owner = acquireStateLock(file, description);
+  let primaryError;
   try {
     return action();
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    releaseStateLock(file, owner);
+    try {
+      releaseStateLock(file, owner);
+    } catch (releaseError) {
+      // A release failure must not replace the failure that caused it.
+      if (!primaryError) throw releaseError;
+      throw withSuppressedCleanupError(primaryError, releaseError);
+    }
   }
 }
 
@@ -1801,20 +1831,12 @@ function deleteOwnedForegroundManifest(context) {
 }
 
 function validateForegroundUsageRecord(raw, manifest) {
-  return raw?.schemaVersion === USAGE_SCHEMA_VERSION
-    && raw?.provider === PROVIDER
-    && raw?.id === manifest.usageRecordId
-    && raw?.execution === "foreground"
-    && raw?.kind === manifest.kind
-    && raw?.jobId === null
-    && typeof raw?.launched === "boolean"
-    && (raw?.requestedModel === null || (typeof raw.requestedModel === "string" && MODEL_PATTERN.test(raw.requestedModel)))
-    && (raw?.outcome === null || FINAL_STATUSES.has(raw.outcome))
-    && raw?.lifecycle && validIsoTimestamp(raw.lifecycle.createdAt)
-    && (raw.lifecycle.startedAt == null || validIsoTimestamp(raw.lifecycle.startedAt))
-    && (raw.lifecycle.finishedAt == null || validIsoTimestamp(raw.lifecycle.finishedAt))
-    && (raw.lifecycle.durationMs == null || (Number.isSafeInteger(raw.lifecycle.durationMs) && raw.lifecycle.durationMs >= 0))
-    && raw?.bytes && [raw.bytes.prompt, raw.bytes.output, raw.bytes.error].every((value) => Number.isSafeInteger(value) && value >= 0);
+  return validUsageRecordShape(raw, {
+    id: manifest.usageRecordId,
+    execution: "foreground",
+    kind: manifest.kind,
+    jobId: null
+  });
 }
 
 function reconcileForegroundUsageForRecoveryLocked(store, manifest, outputBytes, errorBytes) {
@@ -1986,20 +2008,12 @@ function deleteOwnedBackgroundProvision(context) {
 }
 
 function validateBackgroundProvisionUsageRecord(raw, manifest) {
-  return raw?.schemaVersion === USAGE_SCHEMA_VERSION
-    && raw?.provider === PROVIDER
-    && raw?.id === manifest.usageRecordId
-    && raw?.execution === "background"
-    && raw?.kind === manifest.kind
-    && raw?.jobId === manifest.id
-    && typeof raw?.launched === "boolean"
-    && (raw?.requestedModel === null || (typeof raw.requestedModel === "string" && MODEL_PATTERN.test(raw.requestedModel)))
-    && (raw?.outcome === null || FINAL_STATUSES.has(raw.outcome))
-    && raw?.lifecycle && validIsoTimestamp(raw.lifecycle.createdAt)
-    && (raw.lifecycle.startedAt == null || validIsoTimestamp(raw.lifecycle.startedAt))
-    && (raw.lifecycle.finishedAt == null || validIsoTimestamp(raw.lifecycle.finishedAt))
-    && (raw.lifecycle.durationMs == null || (Number.isSafeInteger(raw.lifecycle.durationMs) && raw.lifecycle.durationMs >= 0))
-    && raw?.bytes && [raw.bytes.prompt, raw.bytes.output, raw.bytes.error].every((value) => Number.isSafeInteger(value) && value >= 0);
+  return validUsageRecordShape(raw, {
+    id: manifest.usageRecordId,
+    execution: "background",
+    kind: manifest.kind,
+    jobId: manifest.id
+  });
 }
 
 function backgroundProvisionLinkError(id) {
@@ -2234,17 +2248,22 @@ function refreshJob(store, job) {
   if (!ACTIVE_STATUSES.has(job.status)) return job;
   if (job.workerPid && processAlive(job.workerPid)) return job;
   if (job.guardPid && verifiedGuardAlive(store, job)) return job;
-  if (job.guardPid && rawGuardProcessAlive(job.guardPid)) return job;
+  // An unauthenticated guard process gets only a brief benefit of the doubt,
+  // matching cancelRequest's refusal to act on one: a reused PID must not pin
+  // a dead job active forever.
   const timestamp = Date.parse(job.heartbeatAt || job.createdAt);
-  if (!job.workerPid && Number.isFinite(timestamp) && Date.now() - timestamp <= 15_000) return job;
+  const withinGrace = Number.isFinite(timestamp) && Date.now() - timestamp <= 15_000;
+  if (job.guardPid && rawGuardProcessAlive(job.guardPid) && withinGrace) return job;
+  if (!job.workerPid && withinGrace) return job;
   let transitioned = false;
   const refreshed = updateJob(store, job.id, (current) => {
     if (!ACTIVE_STATUSES.has(current.status)) return current;
     if (current.workerPid && processAlive(current.workerPid)) return current;
     if (current.guardPid && verifiedGuardAlive(store, current)) return current;
-    if (current.guardPid && rawGuardProcessAlive(current.guardPid)) return current;
     const currentTimestamp = Date.parse(current.heartbeatAt || current.createdAt);
-    if (!current.workerPid && Number.isFinite(currentTimestamp) && Date.now() - currentTimestamp <= 15_000) return current;
+    const currentWithinGrace = Number.isFinite(currentTimestamp) && Date.now() - currentTimestamp <= 15_000;
+    if (current.guardPid && rawGuardProcessAlive(current.guardPid) && currentWithinGrace) return current;
+    if (!current.workerPid && currentWithinGrace) return current;
     transitioned = true;
     return {
       ...current,
@@ -2468,48 +2487,31 @@ function parseRunArguments(raw, kind) {
   return parsed;
 }
 
-function parseOptionalJobId(raw) {
-  const value = (raw || "").trim();
-  if (/\s/.test(value)) throw new CompanionError("Expected at most one job ID.");
-  if (value && !JOB_ID_PATTERN.test(value)) throw new CompanionError(`Invalid job ID: ${value}`);
-  return value || undefined;
-}
-
 function parseUsageArguments(raw) {
   const trimmed = (raw || "").trim();
   const tokens = trimmed ? trimmed.split(/\s+/) : [];
   const parsed = { local: false, json: false, window: DEFAULT_USAGE_WINDOW, scope: "repo", groupBy: undefined };
   const seen = new Set();
-  const takeValue = (name, inlineValue, index) => {
+  const seenOnce = (name) => {
     if (seen.has(name)) throw new CompanionError(`${name} may only be specified once.`);
     seen.add(name);
-    if (inlineValue !== undefined) {
-      if (!inlineValue) throw new CompanionError(`${name} requires a value.`);
-      return { value: inlineValue, index };
-    }
-    if (index + 1 >= tokens.length || tokens[index + 1].startsWith("--")) {
-      throw new CompanionError(`${name} requires a value.`);
-    }
-    return { value: tokens[index + 1], index: index + 1 };
   };
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token === "--local") {
-      if (seen.has("--local")) throw new CompanionError("--local may only be specified once.");
-      seen.add("--local");
+      seenOnce("--local");
       parsed.local = true;
       continue;
     }
     if (token === "--json") {
-      if (seen.has("--json")) throw new CompanionError("--json may only be specified once.");
-      seen.add("--json");
+      seenOnce("--json");
       parsed.json = true;
       continue;
     }
     if (token === "--window" || token.startsWith("--window=")) {
-      const inline = token.startsWith("--window=") ? token.slice("--window=".length) : undefined;
-      const taken = takeValue("--window", inline, index);
+      seenOnce("--window");
+      const taken = takeTokenValue(tokens, index, "--window");
       if (!USAGE_WINDOWS.has(taken.value)) {
         throw new CompanionError("--window must be one of: today, 24h, 7d, 30d, all.");
       }
@@ -2518,16 +2520,16 @@ function parseUsageArguments(raw) {
       continue;
     }
     if (token === "--scope" || token.startsWith("--scope=")) {
-      const inline = token.startsWith("--scope=") ? token.slice("--scope=".length) : undefined;
-      const taken = takeValue("--scope", inline, index);
+      seenOnce("--scope");
+      const taken = takeTokenValue(tokens, index, "--scope");
       if (!USAGE_SCOPES.has(taken.value)) throw new CompanionError("--scope must be one of: repo, all.");
       parsed.scope = taken.value;
       index = taken.index;
       continue;
     }
     if (token === "--group-by" || token.startsWith("--group-by=")) {
-      const inline = token.startsWith("--group-by=") ? token.slice("--group-by=".length) : undefined;
-      const taken = takeValue("--group-by", inline, index);
+      seenOnce("--group-by");
+      const taken = takeTokenValue(tokens, index, "--group-by");
       if (!USAGE_GROUPS.has(taken.value)) throw new CompanionError("--group-by must be one of: day, model, kind, outcome.", 1, "INVALID_ARGUMENT");
       parsed.groupBy = taken.value;
       index = taken.index;
@@ -3316,6 +3318,45 @@ function boundedProtocolText(value, maximum = 200) {
   return normalizePublicText(value, maximum);
 }
 
+// Both the ACP client and the MCP server frame newline-delimited JSON from a
+// byte stream with the same bounded accumulation. onFrame receives each
+// complete frame; onOverflow runs when a partial frame exceeds the limit, and
+// the partial frame is discarded.
+function createNdjsonFrameSplitter(limitBytes, onFrame, onOverflow) {
+  let frameChunks = [];
+  let frameBytes = 0;
+  return (chunk) => {
+    let cursor = 0;
+    while (cursor < chunk.length) {
+      const newline = chunk.indexOf(10, cursor);
+      const end = newline === -1 ? chunk.length : newline;
+      const part = chunk.subarray(cursor, end);
+      if (frameBytes + part.length > limitBytes) {
+        frameChunks = [];
+        frameBytes = 0;
+        onOverflow();
+        return;
+      }
+      if (part.length) {
+        frameChunks.push(part);
+        frameBytes += part.length;
+      }
+      if (newline !== -1) {
+        onFrame(frameChunks.length === 1 ? frameChunks[0] : Buffer.concat(frameChunks, frameBytes));
+        frameChunks = [];
+        frameBytes = 0;
+        cursor = newline + 1;
+      } else {
+        cursor = chunk.length;
+      }
+    }
+  };
+}
+
+function ndjsonFrameText(buffer) {
+  return buffer.length && buffer[buffer.length - 1] === 13 ? buffer.subarray(0, -1).toString("utf8") : buffer.toString("utf8");
+}
+
 async function withAcp(cwd, signal, action, { onGuardStarted, onProviderStarted, onClosed } = {}) {
   if (signal?.aborted) throw new CompanionError("Kimi ACP request was cancelled.", 130, "ACP_CANCELLED");
   const configured = configuredCommand();
@@ -3376,8 +3417,6 @@ async function withAcp(cwd, signal, action, { onGuardStarted, onProviderStarted,
   let assistantBytes = 0;
   const outputLimit = runtimeLimits().outputBytes;
   const frameLimit = Math.min(outputLimit, MAX_ACP_FRAME_BYTES);
-  let frameChunks = [];
-  let frameBytes = 0;
   let writeQueue = Promise.resolve();
   const rejectPending = (error) => {
     for (const waiter of pending.values()) {
@@ -3425,7 +3464,7 @@ async function withAcp(cwd, signal, action, { onGuardStarted, onProviderStarted,
   });
   const handleFrame = (buffer) => {
     if (fatalError) return;
-    const line = buffer.length && buffer[buffer.length - 1] === 13 ? buffer.subarray(0, -1).toString("utf8") : buffer.toString("utf8");
+    const line = ndjsonFrameText(buffer);
     let message;
     try { message = JSON.parse(line); } catch { return; }
     if (message.id != null && !message.method) {
@@ -3462,39 +3501,19 @@ async function withAcp(cwd, signal, action, { onGuardStarted, onProviderStarted,
     }
     if (message.id != null) send({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Client method not supported" } }).catch((error) => fail(error));
   };
+  const splitFrames = createNdjsonFrameSplitter(frameLimit, handleFrame, () => {
+    fail(new CompanionError(
+      `Kimi ACP protocol frame exceeded the ${formatLocalBytes(frameLimit)} safety limit.`,
+      1,
+      "OUTPUT_LIMIT",
+      "Narrow the session request or raise KIMI_COMPANION_MAX_OUTPUT_BYTES cautiously."
+    ));
+    child.stdout.resume();
+    terminateAcpChild(child).catch(() => {});
+  });
   child.stdout.on("data", (chunk) => {
     if (fatalError) return;
-    let cursor = 0;
-    while (cursor < chunk.length) {
-      const newline = chunk.indexOf(10, cursor);
-      const end = newline === -1 ? chunk.length : newline;
-      const part = chunk.subarray(cursor, end);
-      if (frameBytes + part.length > frameLimit) {
-        fail(new CompanionError(
-          `Kimi ACP protocol frame exceeded the ${formatLocalBytes(frameLimit)} safety limit.`,
-          1,
-          "OUTPUT_LIMIT",
-          "Narrow the session request or raise KIMI_COMPANION_MAX_OUTPUT_BYTES cautiously."
-        ));
-        frameChunks = [];
-        frameBytes = 0;
-        child.stdout.resume();
-        terminateAcpChild(child).catch(() => {});
-        return;
-      }
-      if (part.length) {
-        frameChunks.push(part);
-        frameBytes += part.length;
-      }
-      if (newline !== -1) {
-        handleFrame(frameChunks.length === 1 ? frameChunks[0] : Buffer.concat(frameChunks, frameBytes));
-        frameChunks = [];
-        frameBytes = 0;
-        cursor = newline + 1;
-      } else {
-        cursor = chunk.length;
-      }
-    }
+    splitFrames(chunk);
   });
   child.stdout.on("error", () => {
     fail(new CompanionError("Kimi ACP output transport failed.", 1, "ACP_CLOSED", null, true));
@@ -4422,7 +4441,8 @@ async function runForeground(kind, parsed, cwd, signal, usage) {
     terminalOutcome = "finished";
     const safeOutput = sanitizeRenderedText(output);
     const safeDiagnostics = sanitizeRenderedText(diagnostics);
-    return safeDiagnostics ? `${safeOutput || "(request completed without output)"}\n\nWarnings:\n${safeDiagnostics}` : safeOutput;
+    const text = safeOutput || "(request completed without output)";
+    return safeDiagnostics ? `${text}\n\nWarnings:\n${safeDiagnostics}` : text;
   } catch (error) {
     primaryError = error;
     terminalOutcome = error instanceof CompanionError && error.exitCode === 130
@@ -4875,17 +4895,22 @@ async function executeWorker(id, token, cwd) {
     }
     boundArtifactFiles(outputFile(store, id), errorFile(store, id), outputLimitBytes);
     if (terminalState && (!managed || managedTerminated)) {
-      const current = readJob(store, id);
-      const terminalJob = {
-        ...current,
-        ...terminalState,
-        workerPid: null,
-        guardPid: null,
-        heartbeatAt: new Date().toISOString()
-      };
-      try { finishUsageForJobLocked(store, terminalJob, terminalJob.status); }
-      catch { /* Result, status, or cleanup can reconcile a missed ledger write. */ }
-      job = updateJob(store, id, () => terminalJob);
+      // Merge the terminal state under the job lock: building the record from an
+      // unlocked read could clobber a concurrent status write. Finalizing usage
+      // inside the same locked update keeps the established ordering: a terminal
+      // status is never observable before its ledger write.
+      job = updateJob(store, id, (current) => {
+        const terminalJob = {
+          ...current,
+          ...terminalState,
+          workerPid: null,
+          guardPid: null,
+          heartbeatAt: new Date().toISOString()
+        };
+        try { finishUsageForJobLocked(store, terminalJob, terminalJob.status); }
+        catch { /* Result, status, or cleanup can reconcile a missed ledger write. */ }
+        return terminalJob;
+      });
     }
   }
 }
@@ -5547,24 +5572,12 @@ function reconcileLinkedUsageForCleanupLocked(store, job) {
   catch {
     throw new CompanionError(`Linked usage metadata is unreadable for ${job.id}.`, 1, "CLEANUP_USAGE_RECONCILIATION_FAILED");
   }
-  const lifecycleValid = raw?.lifecycle
-    && validIsoTimestamp(raw.lifecycle.createdAt)
-    && (raw.lifecycle.startedAt == null || validIsoTimestamp(raw.lifecycle.startedAt))
-    && (raw.lifecycle.finishedAt == null || validIsoTimestamp(raw.lifecycle.finishedAt))
-    && (raw.lifecycle.durationMs == null || (Number.isSafeInteger(raw.lifecycle.durationMs) && raw.lifecycle.durationMs >= 0));
-  const bytesValid = raw?.bytes
-    && [raw.bytes.prompt, raw.bytes.output, raw.bytes.error].every((value) => Number.isSafeInteger(value) && value >= 0);
-  if (raw?.schemaVersion !== USAGE_SCHEMA_VERSION
-      || raw?.provider !== PROVIDER
-      || raw?.id !== job.usageRecordId
-      || raw?.execution !== "background"
-      || raw?.kind !== job.kind
-      || raw?.jobId !== job.id
-      || typeof raw?.launched !== "boolean"
-      || (raw?.requestedModel !== null && (typeof raw.requestedModel !== "string" || !MODEL_PATTERN.test(raw.requestedModel)))
-      || (raw?.outcome !== null && !FINAL_STATUSES.has(raw.outcome))
-      || !lifecycleValid
-      || !bytesValid) {
+  if (!validUsageRecordShape(raw, {
+    id: job.usageRecordId,
+    execution: "background",
+    kind: job.kind,
+    jobId: job.id
+  })) {
     throw new CompanionError(`Linked usage metadata does not match terminal job ${job.id}.`, 1, "CLEANUP_USAGE_RECONCILIATION_FAILED");
   }
   const record = usageRecordDocument(raw);
@@ -5954,7 +5967,7 @@ async function runMcp() {
     track(response);
   };
   const handleLine = (buffer) => {
-    const line = buffer.length && buffer[buffer.length - 1] === 13 ? buffer.subarray(0, -1).toString("utf8") : buffer.toString("utf8");
+    const line = ndjsonFrameText(buffer);
     let message;
     try { message = JSON.parse(line); }
     catch {
@@ -5992,7 +6005,9 @@ async function runMcp() {
           return;
         }
         if (message.method === "initialize") {
-          await sendMcp({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: message.params?.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: `${PROVIDER}-companion`, version: VERSION } } });
+          // Declare the protocol version this server implements; do not echo a
+          // newer client-proposed version back as if it were supported.
+          await sendMcp({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: MCP_PROTOCOL_VERSION, capabilities: { tools: {} }, serverInfo: { name: `${PROVIDER}-companion`, version: VERSION } } });
         } else if (message.method === "ping") {
           await sendMcp({ jsonrpc: "2.0", id: message.id, result: {} });
         } else if (message.method === "tools/list") {
@@ -6031,32 +6046,12 @@ async function runMcp() {
     })();
     track(request);
   };
-  let frameChunks = [];
-  let frameBytes = 0;
+  const splitFrames = createNdjsonFrameSplitter(MAX_MCP_FRAME_BYTES, handleLine, () => {
+    closeInput(new CompanionError("MCP request frame exceeded the 4 MiB safety limit.", 1, "MCP_FRAME_TOO_LARGE"));
+  });
   process.stdin.on("data", (chunk) => {
     if (inputClosed) return;
-    let cursor = 0;
-    while (cursor < chunk.length) {
-      const newline = chunk.indexOf(10, cursor);
-      const end = newline === -1 ? chunk.length : newline;
-      const part = chunk.subarray(cursor, end);
-      if (frameBytes + part.length > MAX_MCP_FRAME_BYTES) {
-        frameChunks = [];
-        frameBytes = 0;
-        closeInput(new CompanionError("MCP request frame exceeded the 4 MiB safety limit.", 1, "MCP_FRAME_TOO_LARGE"));
-        return;
-      }
-      if (part.length) {
-        frameChunks.push(part);
-        frameBytes += part.length;
-      }
-      if (newline !== -1) {
-        handleLine(frameChunks.length === 1 ? frameChunks[0] : Buffer.concat(frameChunks, frameBytes));
-        frameChunks = [];
-        frameBytes = 0;
-        cursor = newline + 1;
-      } else cursor = chunk.length;
-    }
+    splitFrames(chunk);
   });
   process.stdin.once("end", () => closeInput());
   process.stdin.once("close", () => closeInput());

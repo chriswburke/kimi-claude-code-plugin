@@ -864,9 +864,15 @@ test("MCP stdout closure aborts work and exits without an uncaught stream error"
 });
 
 function collectFiles(directory) {
-  if (!fs.existsSync(directory)) return [];
+  let entries;
+  try { entries = fs.readdirSync(directory, { withFileTypes: true }); }
+  catch (error) {
+    // The runtime retires lock directories while tests watch the live tree.
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  }
   const files = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+  for (const entry of entries) {
     const target = path.join(directory, entry.name);
     if (entry.isDirectory()) files.push(...collectFiles(target));
     else files.push(target);

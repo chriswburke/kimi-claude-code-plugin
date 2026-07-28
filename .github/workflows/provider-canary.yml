@@ -40,7 +40,9 @@ jobs:
           KIMI_MODEL_API_KEY: ${{ secrets.KIMI_MODEL_API_KEY }}
         run: test -n "$KIMI_MODEL_API_KEY"
       - name: Install Kimi Code
-        run: npm install --global @moonshot-ai/kimi-code@latest
+        # Pinned because this job runs the package with KIMI_MODEL_API_KEY in
+        # its environment. Bump deliberately after reviewing the new release.
+        run: npm install --global @moonshot-ai/kimi-code@0.29.2
       - name: Check Kimi setup and models
         env:
           KIMI_MODEL_NAME: ${{ inputs.kimi_model }}

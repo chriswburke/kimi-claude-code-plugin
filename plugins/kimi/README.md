@@ -162,8 +162,8 @@ Kimi scopes background jobs to the current Git repository. They retain the
 existing Kimi state namespace, so upgrades preserve visibility of older jobs.
 `/kimi:status` shows the 10 most recent jobs across statuses by default.
 `--active` filters to active jobs, `--all` removes the default limit for the
-current repository, and `--limit` applies an explicit cap. `--active` and
-`--all` are mutually exclusive.
+current repository, and `--limit` applies an explicit cap from 1 to 1000.
+`--active` and `--all` are mutually exclusive.
 
 `/kimi:result` returns a terminal job’s retained output. Add `--wait` to wait for
 an active job and optionally bound that observation with `--timeout`. A result
