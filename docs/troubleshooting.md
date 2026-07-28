@@ -4,7 +4,6 @@ meta:
   navLabel: Troubleshooting
   category: Guides
   contentType: Troubleshooting
-contentPlan: ./content-plan.md#troubleshooting
 ---
 
 # Troubleshoot Kimi Code Companion failures

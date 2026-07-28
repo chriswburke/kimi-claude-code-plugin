@@ -4,7 +4,6 @@ meta:
   navLabel: Jobs and Usage
   category: Guides
   contentType: How-to
-contentPlan: ./content-plan.md#manage-jobs-and-usage
 ---
 
 # Manage Kimi background jobs and usage

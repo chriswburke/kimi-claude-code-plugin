@@ -4,7 +4,6 @@ meta:
   navLabel: Release Kimi
   category: Guides
   contentType: How-to
-contentPlan: ./content-plan.md#release-packages
 ---
 
 # Release Kimi Code Companion

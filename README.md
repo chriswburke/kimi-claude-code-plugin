@@ -1,5 +1,3 @@
-<!-- Content plan: docs/content-plan.md#repository-landing -->
-
 # Kimi Code Companion for Claude Code
 
 Use Kimi Code from Claude Code for autonomous delegation, tool-constrained repository analysis, managed background jobs, and private local usage reporting.

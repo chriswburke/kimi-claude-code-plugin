@@ -4,7 +4,6 @@ meta:
   navLabel: Getting Started
   category: Guides
   contentType: Tutorial
-contentPlan: ./content-plan.md#get-started
 ---
 
 # Install Kimi Code Companion in Claude Code

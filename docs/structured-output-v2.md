@@ -4,7 +4,6 @@ meta:
   navLabel: Structured Output
   category: Reference
   contentType: Reference
-contentPlan: ./content-plan.md#structured-output
 ---
 
 # Parse Kimi structured output

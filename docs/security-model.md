@@ -4,7 +4,6 @@ meta:
   navLabel: Security Model
   category: Security
   contentType: Conceptual
-contentPlan: ./content-plan.md#security-model
 ---
 
 # Understand the Kimi Code Companion security model

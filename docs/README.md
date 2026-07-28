@@ -4,7 +4,6 @@ meta:
   navLabel: Documentation Home
   category: Overview
   contentType: Landing
-contentPlan: ./content-plan.md#documentation-home
 ---
 
 # Find the right Kimi Code Companion guide
@@ -26,7 +25,6 @@ Use these guides to install the Kimi plugin, choose a workflow, operate its jobs
 
 - [Understand the Kimi security model](./security-model.md)
 - [Release Kimi Code Companion](./release-packages.md)
-- [Maintain the documentation set](./content-plan.md)
 
 ## Package reference
 

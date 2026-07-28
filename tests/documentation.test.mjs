@@ -168,25 +168,18 @@ function parseTaskFrontmatter(source, relative) {
   for (const key of ["title", "navLabel", "category", "contentType"]) {
     assert.ok(meta.get(key), `${relative} is missing meta.${key}`);
   }
-  const contentPlanLines = lines.flatMap((line) => {
-    const match = /^contentPlan:\s*(\S+)$/.exec(line);
-    return match ? [match[1]] : [];
-  });
-  assert.equal(contentPlanLines.length, 1, `${relative} must contain one top-level contentPlan`);
-  return { meta, contentPlan: contentPlanLines[0] };
+  return { meta };
 }
 
-test("task documentation has complete metadata, titles, summaries, and content-plan links", () => {
+test("task documentation has complete metadata, titles, and summaries", () => {
   for (const filename of DOC_FILES) {
     const relative = path.relative(ROOT, filename);
     const source = readMarkdown(filename);
-    const { meta, contentPlan } = parseTaskFrontmatter(source, relative);
+    const { meta } = parseTaskFrontmatter(source, relative);
     const title = meta.get("title");
     const contentType = meta.get("contentType");
     assert.equal(CONTENT_TYPES.has(contentType), true, `${relative} has an invalid meta.contentType`);
     assert.equal(source.match(/^#\s+(.+)$/m)?.[1], title, `${relative} H1 must match meta.title`);
-    assert.ok(contentPlan, `${relative} is missing contentPlan`);
-    assertLocalTarget(filename, contentPlan);
 
     const lines = source.slice(source.indexOf(`\n# ${title}\n`) + title.length + 4).split("\n");
     const opener = lines.find((line) => line.trim());
@@ -248,8 +241,7 @@ test("documentation home links every planned reader page", () => {
     "security-model.md",
     "structured-output-v2.md",
     "troubleshooting.md",
-    "release-packages.md",
-    "content-plan.md"
+    "release-packages.md"
   ]) {
     assert.match(home, new RegExp(`\\(\\./${name.replace(".", "\\.")}\\)`), `docs/README.md does not link ${name}`);
   }
@@ -297,7 +289,6 @@ test("documentation parsing handles portable Markdown boundaries", () => {
     "  category: Test",
     "  contentType: Reference",
     "meta:",
-    "contentPlan: ./content-plan.md",
     "---",
     ""
   ].join("\n"), "synthetic.md"), /missing meta\.title/);

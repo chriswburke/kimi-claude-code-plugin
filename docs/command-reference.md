@@ -4,7 +4,6 @@ meta:
   navLabel: Kimi Commands
   category: Reference
   contentType: Reference
-contentPlan: ./content-plan.md#command-reference
 ---
 
 # Run Kimi Code Companion commands
