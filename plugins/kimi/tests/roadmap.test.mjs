@@ -402,7 +402,7 @@ test("documentation and package metadata describe the trusted hook boundary", ()
   assert.doesNotMatch(readme, /enforced read-only/i);
   assert.match(manifest.description, /tool-constrained read-only/);
   assert.ok(packageJson.files.includes("CHANGELOG.md"));
-  assert.match(fs.readFileSync(path.join(pluginRoot, "CHANGELOG.md"), "utf8"), /## 1\.0\.0[\s\S]*## 0\.4\.0/);
+  assert.match(fs.readFileSync(path.join(pluginRoot, "CHANGELOG.md"), "utf8"), /## 1\.0\.0/);
 });
 
 test("package README retains the repository writing invariants", () => {

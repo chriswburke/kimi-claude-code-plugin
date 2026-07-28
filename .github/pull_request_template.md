@@ -16,6 +16,6 @@ List the commands and results:
 ## Documentation and safety
 
 - [ ] I updated documentation for user-visible behavior.
-- [ ] Any `CLAUDE_PLUGIN_DATA` migration language preserves old private state and does not promise automatic copying or deletion.
+- [ ] Any `CLAUDE_PLUGIN_DATA` language preserves operator private state and does not promise automatic copying or deletion.
 - [ ] I removed credentials, authorization headers, private prompts, model output, local paths, and usage records from this pull request.
 - [ ] I followed [SECURITY.md](../SECURITY.md) for any vulnerability report.

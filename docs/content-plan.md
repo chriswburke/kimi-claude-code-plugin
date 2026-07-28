@@ -35,7 +35,7 @@ This plan defines the audience, purpose, and ownership of Kimi documentation. Ke
 
 ## Repository landing
 
-Keep the root README concise: install Kimi, state the marketplace identity, explain the private-state migration, and route readers to one guide.
+Keep the root README concise: install Kimi, state the marketplace identity, and route readers to one guide.
 
 ## Documentation home
 
@@ -69,6 +69,6 @@ Help an operator diagnose setup, executable trust, job recovery, and state-ident
 
 Guide maintainers through Kimi-only validation, versioning, packaging, and recovery.
 
-## Migration rule
+## Scope rule
 
-This is one of exactly two successor repositories to the former combined marketplace. Document only the Kimi install identity `model-companions-kimi`, source `plugins/kimi`, and Kimi workflows. Mention the old identity or the separate GLM repository only when it helps an operator protect private state during the `CLAUDE_PLUGIN_DATA` identity migration.
+Document only the Kimi install identity `model-companions-kimi`, source `plugins/kimi`, and Kimi workflows. Describe the plugin as it is now. Do not document prior packaging arrangements, other providers, or migration steps.

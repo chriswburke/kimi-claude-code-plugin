@@ -50,20 +50,4 @@ These commands inspect local configuration and do not start model inference. `/k
 
 `explore` and `plan` permit only `Read`, `Grep`, and `Glob` through a request-local agent. `/kimi:ask` may modify files, so use it only in a trusted checkout.
 
-## Cut over from the combined marketplace
-
-The old combined installation used a different plugin identity. Before installing the replacement, finish or cancel all jobs shown by `/kimi:status --active` and inspect `/kimi:usage --local --json`. Exit Claude Code, then remove the legacy plugin without deleting its private data:
-
-```bash
-claude plugin list --json
-claude plugin uninstall kimi@model-companions \
-  --scope user --keep-data
-```
-
-If the list reports the legacy identity at project or local scope, repeat the uninstall with `--scope project` or `--scope local`. Remove every reported legacy scope before continuing.
-
-Register this repository, install `kimi@model-companions-kimi`, reload plugins, and run `/kimi:setup`. Do not keep both identities enabled because each registers the same `/kimi:*` commands and MCP tools.
-
-Claude Code can supply a different `CLAUDE_PLUGIN_DATA` path for the new identity. The companion deliberately treats that path as a new private state root and never merges, copies, or removes old state. Keep the old state directory until you have inspected any jobs or usage records you need.
-
 Continue with the [command reference](./command-reference.md), [job and usage guide](./manage-jobs-and-usage.md), or [security model](./security-model.md).

@@ -62,7 +62,7 @@ git tag v1.0.1
 git push origin v1.0.1
 ```
 
-The former combined marketplace is now exactly two repositories. This repository releases only Kimi; do not coordinate a sibling package version, archive, or canary here. The marketplace metadata must continue to point to `./plugins/kimi` and identify `model-companions-kimi`.
+This repository releases only Kimi; do not coordinate a sibling package version, archive, or canary here. The marketplace metadata must continue to point to `./plugins/kimi` and identify `model-companions-kimi`.
 
 ## Recover a stopped version transaction
 

@@ -30,8 +30,4 @@ Use an administrator- or current-user-owned executable and non-writable parent d
 
 Use `/kimi:status --active` to find its identifier, then pass that identifier to `/kimi:result` or `/kimi:cancel`. Cancellation may omit an ID only with exactly one active job. If recovery reports unsafe state, retain the named private evidence and correct the symlink, ownership, or permission problem; do not delete active guard, worker, slot, or job files manually.
 
-## State appears empty after reinstalling
-
-The two-repository migration installs Kimi as `kimi@model-companions-kimi`, so Claude Code may set a new `CLAUDE_PLUGIN_DATA` path. Expect that change. The companion does not merge old combined-installation state into the new identity. Keep the former directory private until any old jobs have stopped and you have completed required inspection.
-
 For command behavior, see the [command reference](./command-reference.md); for trust and containment, see the [security model](./security-model.md).
