@@ -28,7 +28,7 @@ Register the marketplace and install Kimi from Claude Code:
 /reload-plugins
 ```
 
-To develop against a local checkout instead, run `/plugin marketplace add .` from the repository root. The source entry is `./plugins/kimi`.
+To develop against a local checkout instead, run `/plugin marketplace add ./` from the repository root. The source entry is `./plugins/kimi`.
 
 ## Verify Kimi
 

@@ -12,7 +12,7 @@ Run these commands in Claude Code:
 /reload-plugins
 ```
 
-To work on the plugin itself, clone the repository and add it from the checkout with `/plugin marketplace add .` instead.
+To work on the plugin itself, clone the repository and add it from the checkout with `/plugin marketplace add ./` instead.
 
 Kimi requires Git, Node.js 18.18 or newer, Claude Code 2.1.169 or newer, and Kimi Code 0.29.0 or newer. Continuous integration covers Linux and macOS. Windows is untested; run the plugin under WSL there. Authenticate the Kimi CLI with `kimi login`, then verify the installation without model inference:
 
