@@ -21,9 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      CLAUDE_PLUGIN_DATA: ${{ runner.temp }}/model-companion-state
+      # RUNNER_TEMP is read from the environment because the runner context is
+      # not available in job-level env, which fails the whole file at parse time.
+      CLAUDE_PLUGIN_DATA: ${{ github.workspace }}/.canary-state
       MODEL_COMPANION_PROJECT_DIR: ${{ github.workspace }}
-      KIMI_CODE_HOME: ${{ runner.temp }}/kimi-code
+      KIMI_CODE_HOME: ${{ github.workspace }}/.canary-kimi-home
       KIMI_DISABLE_TELEMETRY: "1"
       KIMI_CODE_NO_AUTO_UPDATE: "1"
     steps:
