@@ -60,7 +60,7 @@ test("usage is local-only, non-billable, and available through direct CLI and MC
   assert.match(human.stdout, /membership quota: unavailable/i);
   assert.match(human.stdout, /Run \/usage inside the native Kimi Code TUI/);
   assert.match(human.stdout, /https:\/\/www\.kimi\.com\/code\/console/);
-  assert.match(human.stdout, /earlier foreground runs and legacy background jobs are not included/);
+  assert.match(human.stdout, /A job whose usage record is missing stays readable through status and result without being counted/);
 
   const direct = usageJson(repository, env, "--local", "--window=all", "--scope=repo");
   assert.equal(direct.aggregates.runs, 0);
@@ -347,7 +347,7 @@ test("cleanup-first finalizes a linked null usage record before deleting its ter
   assert.equal(fs.existsSync(recordPath), false);
 });
 
-test("legacy background jobs remain readable and are honestly excluded from local tracking", async () => {
+test("a job without a usage record stays readable and is honestly excluded from local tracking", async () => {
   const repository = createChangedRepository();
   const temporary = temporaryDirectory();
   const env = fakeEnvironment(temporary);
@@ -372,5 +372,5 @@ test("legacy background jobs remain readable and are honestly excluded from loca
   assert.equal(report.aggregates.runs, 0);
   assert.equal(report.trackingSince, null);
   assert.equal(report.coverage.legacyBackgroundIncluded, false);
-  assert.match(report.coverage.note, /legacy background jobs are not included/);
+  assert.match(report.coverage.note, /stays readable through status and result without being counted/);
 });

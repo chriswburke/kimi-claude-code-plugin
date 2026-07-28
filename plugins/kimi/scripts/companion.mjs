@@ -15,7 +15,7 @@ const PROVIDER_LABEL = "KIMI";
 const PROVIDER_NAME = "Kimi Code";
 const USAGE_SCHEMA_VERSION = 1;
 const USAGE_TRACKING_VERSION = "1.0.0";
-const USAGE_TRACKING_SINCE_VERSION = "0.4.0";
+const USAGE_TRACKING_SINCE_VERSION = "1.0.0";
 const USAGE_CONSOLE_URL = "https://www.kimi.com/code/console";
 const DEFAULT_USAGE_WINDOW = "7d";
 const USAGE_WINDOWS = new Set(["today", "24h", "7d", "30d", "all"]);
@@ -5151,7 +5151,7 @@ function buildUsageReport(parsed, cwd) {
       reportingVersion: USAGE_TRACKING_VERSION,
       historicalForegroundComplete: false,
       legacyBackgroundIncluded: false,
-      note: `Local run tracking begins with Kimi companion ${USAGE_TRACKING_SINCE_VERSION}; earlier foreground runs and legacy background jobs are not included.`
+      note: `Counts cover runs recorded by Kimi companion ${USAGE_TRACKING_SINCE_VERSION} and later. A job whose usage record is missing stays readable through status and result without being counted.`
     },
     membershipQuota: {
       available: false,
