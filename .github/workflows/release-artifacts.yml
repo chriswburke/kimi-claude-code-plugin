@@ -28,6 +28,22 @@ jobs:
       - name: Verify manual or tagged release target
         run: node scripts/verify-release-target.mjs "$RELEASE_TAG"
       - run: npm install --global @anthropic-ai/claude-code@2.1.169
+      # The runner tool cache installs below a group- or world-writable
+      # directory, which the runtime executable-trust check correctly refuses
+      # for a provider or Git binary. Tighten those chains rather than
+      # weakening the check. Keep in step with ci.yml and release-checks.yml.
+      - name: Trust the Node and Git toolchain directory chains
+        run: |
+          for tool in node git; do
+            target="$(command -v "$tool")"
+            target="$(readlink -f "$target" 2>/dev/null || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$target")"
+            sudo chmod go-w "$target" || true
+            directory="$(dirname "$target")"
+            while [ "$directory" != "/" ]; do
+              sudo chmod go-w "$directory" || true
+              directory="$(dirname "$directory")"
+            done
+          done
       - name: Run the full strict release gate
         run: npm run release:check:strict
       - name: Build archive and checksum
