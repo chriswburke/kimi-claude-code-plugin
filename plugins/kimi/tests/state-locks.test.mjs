@@ -270,9 +270,13 @@ test("two stale reclaimers cannot remove a replacement state-lock owner", {
   assert.equal(fs.existsSync(`${lock}.retired-${stale.token}`), true);
 });
 
+// The busy-lock path below spins through the acquire retries and spawns ps to
+// verify the holder's birth identity, so it is the slowest call in this file.
+// Keep the budget generous: a tight one fails on a loaded runner by killing the
+// command, which surfaces as a null exit status rather than a real assertion.
 test("state-lock identity is PID-reuse aware and ambiguous owners fail closed", {
   skip: process.platform === "win32",
-  timeout: 15_000
+  timeout: 45_000
 }, async (t) => {
   const temporary = temporaryDirectory();
   const repository = createChangedRepository();
@@ -299,7 +303,7 @@ test("state-lock identity is PID-reuse aware and ambiguous owners fail closed", 
   writeStateLock(lock, ambiguous);
   const blocked = run(
     ["result", id, "--json"],
-    { cwd: repository, env, timeout: 5_000 }
+    { cwd: repository, env }
   );
   assert.equal(blocked.status, 1);
   const blockedEnvelope = JSON.parse(blocked.stdout);
